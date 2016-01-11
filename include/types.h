@@ -33,6 +33,12 @@ typedef struct
 
 typedef struct
 {
+  uint iv[4];
+
+} rar5_t;
+
+typedef struct
+{
   int   V;
   int   R;
   int   P;
@@ -298,6 +304,8 @@ typedef struct
 
 typedef struct
 {
+  uint E[18];
+
   uint P[18];
 
   uint S0[256];
@@ -667,9 +675,9 @@ typedef struct
 
 typedef struct
 {
-  uint cmds[15];
+  uint cmds[0x100];
 
-} gpu_rule_t;
+} kernel_rule_t;
 
 typedef struct
 {
@@ -801,7 +809,7 @@ typedef struct
 
 } wordr_t;
 
-#define RULES_MAX   16
+#define RULES_MAX   256
 #define PW_MIN      0
 #define PW_MAX      54
 #define PW_MAX1     (PW_MAX + 1)
@@ -812,15 +820,20 @@ struct __hc_device_param
 {
   uint              device_id;
 
-  uint              gpu_processors;
-  uint              gpu_threads;
-  uint              gpu_accel;
-  uint              gpu_vector_width;
-  uint64_t          gpu_maxmem_alloc;
-  uint              gpu_power;          // these both are based on their _user counterpart
-  uint              gpu_blocks;         // but are modified by autotuner and used inside crack loops
-  uint              gpu_power_user;
-  uint              gpu_blocks_user;
+  uint              sm_major;
+  uint              sm_minor;
+  uint              kernel_exec_timeout;
+
+  uint              device_processors;
+  uint              device_processor_cores;
+  uint64_t          device_maxmem_alloc;
+
+  uint              kernel_threads;
+  uint              kernel_accel;
+  uint              kernel_power;          // these both are based on their _user counterpart
+  uint              kernel_blocks;         // but are modified by autotuner and used inside crack loops
+  uint              kernel_power_user;
+  uint              kernel_blocks_user;
 
   uint              size_pws;
   uint              size_tmps;
@@ -832,8 +845,6 @@ struct __hc_device_param
   uint              size_shown;
   uint              size_results;
   uint              size_plains;
-
-  uint              vect_size;
 
   uint (*pw_add)    (struct __hc_device_param *, const uint8_t *, const uint);
 
@@ -870,73 +881,13 @@ struct __hc_device_param
 
   // device specific attributes starting
 
-  #ifdef _CUDA
-
-  int               sm_major;
-  int               sm_minor;
-
-  CUdevice          device;
-
-  CUfunction        function1;
-  CUfunction        function12;
-  CUfunction        function2;
-  CUfunction        function23;
-  CUfunction        function3;
-  CUfunction        function_mp;
-  CUfunction        function_mp_l;
-  CUfunction        function_mp_r;
-  CUfunction        function_amp;
-  CUfunction        function_tb;
-  CUfunction        function_tm;
-
-  CUcontext         context;
-  CUmodule          module;
-  CUmodule          module_mp;
-  CUmodule          module_amp;
-  CUstream          stream;
-
-  CUdeviceptr       d_pws_buf;
-  CUdeviceptr       d_pws_amp_buf;
-  CUdeviceptr       d_words_buf_l;
-  CUdeviceptr       d_words_buf_r;
-  CUdeviceptr       c_words_buf_r;
-  CUdeviceptr       d_rules;
-  CUdeviceptr       c_rules;
-  CUdeviceptr       d_combs;
-  CUdeviceptr       c_combs;
-  CUdeviceptr       d_bfs;
-  CUdeviceptr       c_bfs;
-  CUdeviceptr       d_tm;
-  CUdeviceptr       c_tm;
-  size_t            c_bytes;
-  CUdeviceptr       d_bitmap_s1_a;
-  CUdeviceptr       d_bitmap_s1_b;
-  CUdeviceptr       d_bitmap_s1_c;
-  CUdeviceptr       d_bitmap_s1_d;
-  CUdeviceptr       d_bitmap_s2_a;
-  CUdeviceptr       d_bitmap_s2_b;
-  CUdeviceptr       d_bitmap_s2_c;
-  CUdeviceptr       d_bitmap_s2_d;
-  CUdeviceptr       d_plain_bufs;
-  CUdeviceptr       d_digests_buf;
-  CUdeviceptr       d_digests_shown;
-  CUdeviceptr       d_salt_bufs;
-  CUdeviceptr       d_esalt_bufs;
-  CUdeviceptr       d_bcrypt_bufs;
-  CUdeviceptr       d_tmps;
-  CUdeviceptr       d_hooks;
-  CUdeviceptr       d_result;
-  CUdeviceptr       d_scryptV_buf;
-  CUdeviceptr       d_root_css_buf;
-  CUdeviceptr       d_markov_css_buf;
-
-  #elif _OCL
-
   char             *device_name;
+  char             *device_name_chksum;
   char             *device_version;
   char             *driver_version;
 
   cl_device_id      device;
+  cl_device_type    device_type;
 
   cl_kernel         kernel1;
   cl_kernel         kernel12;
@@ -949,12 +900,14 @@ struct __hc_device_param
   cl_kernel         kernel_amp;
   cl_kernel         kernel_tb;
   cl_kernel         kernel_tm;
+  cl_kernel         kernel_weak;
 
   cl_context        context;
 
   cl_program        program;
   cl_program        program_mp;
   cl_program        program_amp;
+  cl_program        program_weak;
 
   cl_command_queue  command_queue;
 
@@ -990,8 +943,6 @@ struct __hc_device_param
   cl_mem            d_root_css_buf;
   cl_mem            d_markov_css_buf;
 
-  #endif
-
   #define PARAMCNT 32
 
   void             *kernel_params[PARAMCNT];
@@ -1014,18 +965,18 @@ struct __hc_device_param
   uint64_t          kernel_params_mp_l_buf64[PARAMCNT];
 
   uint32_t          kernel_params_amp_buf32[PARAMCNT];
-
 };
 
 typedef struct __hc_device_param hc_device_param_t;
 
 typedef struct
 {
-  HM_ADAPTER adapter_index;
+  union {
+    HM_ADAPTER_AMD amd;
+    HM_ADAPTER_NV  nv;
+  } adapter_index;
 
-  #ifdef _OCL
   int od_version;
-  #endif
 
   int fan_supported;
 
@@ -1040,11 +991,13 @@ typedef struct
    * threads
    */
 
+  uint                vendor_id;
+
   uint                devices_status;
   uint                devices_cnt;
   hc_device_param_t  *devices_param;
 
-  uint                gpu_blocks_all;
+  uint                kernel_blocks_all;
 
   /**
    * attack specific
@@ -1058,8 +1011,8 @@ typedef struct
   uint                attack_kern;
   uint                attack_exec;
 
-  uint                gpu_rules_cnt;
-  gpu_rule_t         *gpu_rules_buf;
+  uint                kernel_rules_cnt;
+  kernel_rule_t      *kernel_rules_buf;
 
   uint                combs_mode;
   uint                combs_cnt;
@@ -1134,7 +1087,11 @@ typedef struct
   char   *session;
   char    separator;
   char   *hashfile;
+  char   *homedir;
   char   *install_dir;
+  char   *profile_dir;
+  char   *session_dir;
+  char   *shared_dir;
   char   *outfile;
   uint    outfile_format;
   uint    outfile_autohex;
@@ -1164,9 +1121,9 @@ typedef struct
   uint    hex_wordlist;
   uint    pw_min;
   uint    pw_max;
-  float   gpu_blocks_div;
-  uint    gpu_accel;
-  uint    gpu_loops;
+  float   kernel_blocks_div;
+  uint    kernel_accel;
+  uint    kernel_loops;
   uint    powertune_enable;
   uint    scrypt_tmto;
   uint    segment_size;
@@ -1205,6 +1162,8 @@ typedef struct
   uint64_t limit;
 
   restore_data_t *rd;
+
+  uint64_t checkpoint_cur_words;  // used for the "stop at next checkpoint" feature
 
   /**
    * status, timer

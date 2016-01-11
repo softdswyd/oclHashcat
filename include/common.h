@@ -33,6 +33,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <dlfcn.h>
+#include <pwd.h>
 
 #ifdef LINUX
 #include <termio.h>
@@ -69,6 +70,9 @@ typedef UINT32 uint;
 typedef UINT64 uint64_t;
 
 typedef HINSTANCE HM_LIB;
+
+#define mkdir(name,mode) mkdir (name)
+
 #endif
 
 #define SPEED_CACHE  128
@@ -89,7 +93,7 @@ void log_out (FILE *fp, const char *fmt, ...);
 void log_info (const char *fmt, ...);
 void log_error (const char *fmt, ...);
 
-#endif
-
 typedef uint32_t uint; // we should rename to u32, sooner or later, for consistency
 typedef uint64_t u64;
+
+#endif

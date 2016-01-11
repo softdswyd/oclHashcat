@@ -1,11 +1,12 @@
 *.exe
 *.bin
 *.app
+oclHashcat
 *.restore
 *.dictstat
 *.pot
 *.log
+deps/**
+kernels/**
 lib/*.a
 obj/*.o
-kernels/4098/*.llvmir
-kernels/4318/*.cubin

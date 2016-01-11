@@ -54,38 +54,25 @@
 #define hc_sleep(x) sleep ((x));
 #endif
 
-#ifdef _CUDA
-#include <ext_cuda.h>
-#elif _OCL
 #include <ext_OpenCL.h>
-#endif
 
 /**
  * temperature management
  */
 
 #ifdef LINUX
-#ifdef _CUDA
 #include <ext_nvml.h>
-#elif _OCL
 #include <ext_ADL.h>
-#endif
 #endif
 
 #ifdef WIN
-#ifdef _CUDA
 #include <ext_nvapi.h>
-#elif _OCL
 #include <ext_ADL.h>
-#endif
 #endif
 
 #ifdef OSX
-#ifdef _CUDA
 #include <ext_smi.h>
-#elif _OCL
 #include <ext_dummy.h>
-#endif
 #endif
 
 /**
@@ -97,10 +84,14 @@
 #define DEVICES_MAX           128
 
 #define CL_PLATFORMS_MAX      16
+
 #define CL_VENDOR_NV          "NVIDIA Corporation"
 #define CL_VENDOR_AMD         "Advanced Micro Devices, Inc."
-#define CL_VENDOR_SDS         "Shiloh Distributed Solutions"
-#define CL_VENDOR_APPLE       "Apple"
+#define CL_VENDOR_POCL        "The pocl project"
+
+#define VENDOR_ID_AMD         4098
+#define VENDOR_ID_NV          4318
+#define VENDOR_ID_GENERIC     9999
 
 #define BLOCK_SIZE            64
 
@@ -116,10 +107,7 @@
 #define INDUCT_DIR            "induct"
 #define OUTFILES_DIR          "outfiles"
 
-#define LOOPBACK_FILE         "loopback"
-
-#define VENDOR_ID_AMD         4098
-#define VENDOR_ID_NV          4318
+#define LOOPBACK_FILE         "hashcat.loopback"
 
 /**
  * types
@@ -137,7 +125,7 @@ typedef pthread_mutex_t       hc_thread_mutex_t;
 
 #include <types.h>
 #include "rp_cpu.h"
-#include "rp_gpu.h"
+#include "rp_kernel.h"
 
 /**
  * valid project specific global stuff
@@ -184,716 +172,366 @@ extern hc_thread_mutex_t mux_display;
 #define PW_LENGTH_MAX_7400    15
 
 /**
- * gpu accel / loops macro
+ * device accel / loops macro
  */
 
-#define GPU_ACCEL_NV_0        128
-#define GPU_ACCEL_NV_10       128
-#define GPU_ACCEL_NV_11       128
-#define GPU_ACCEL_NV_12       128
-#define GPU_ACCEL_NV_20       64
-#define GPU_ACCEL_NV_21       64
-#define GPU_ACCEL_NV_22       64
-#define GPU_ACCEL_NV_23       64
-#define GPU_ACCEL_NV_30       128
-#define GPU_ACCEL_NV_40       64
-#define GPU_ACCEL_NV_50       64
-#define GPU_ACCEL_NV_60       64
-#define GPU_ACCEL_NV_100      64
-#define GPU_ACCEL_NV_101      64
-#define GPU_ACCEL_NV_110      64
-#define GPU_ACCEL_NV_111      64
-#define GPU_ACCEL_NV_112      64
-#define GPU_ACCEL_NV_120      64
-#define GPU_ACCEL_NV_121      64
-#define GPU_ACCEL_NV_122      64
-#define GPU_ACCEL_NV_124      64
-#define GPU_ACCEL_NV_130      64
-#define GPU_ACCEL_NV_131      64
-#define GPU_ACCEL_NV_132      64
-#define GPU_ACCEL_NV_133      64
-#define GPU_ACCEL_NV_140      64
-#define GPU_ACCEL_NV_141      64
-#define GPU_ACCEL_NV_150      64
-#define GPU_ACCEL_NV_160      64
-#define GPU_ACCEL_NV_190      64
-#define GPU_ACCEL_NV_200      64
-#define GPU_ACCEL_NV_300      64
-#define GPU_ACCEL_NV_400      8
-#define GPU_ACCEL_NV_500      8
-#define GPU_ACCEL_NV_501      8
-#define GPU_ACCEL_NV_900      128
-#define GPU_ACCEL_NV_910      128
-#define GPU_ACCEL_NV_1000     128
-#define GPU_ACCEL_NV_1100     64
-#define GPU_ACCEL_NV_1400     64
-#define GPU_ACCEL_NV_1410     64
-#define GPU_ACCEL_NV_1420     64
-#define GPU_ACCEL_NV_1421     64
-#define GPU_ACCEL_NV_1430     64
-#define GPU_ACCEL_NV_1440     64
-#define GPU_ACCEL_NV_1441     64
-#define GPU_ACCEL_NV_1450     32
-#define GPU_ACCEL_NV_1460     32
-#define GPU_ACCEL_NV_1500     16
-#define GPU_ACCEL_NV_1600     8
-#define GPU_ACCEL_NV_1700     64
-#define GPU_ACCEL_NV_1710     64
-#define GPU_ACCEL_NV_1711     64
-#define GPU_ACCEL_NV_1720     64
-#define GPU_ACCEL_NV_1722     64
-#define GPU_ACCEL_NV_1730     64
-#define GPU_ACCEL_NV_1731     64
-#define GPU_ACCEL_NV_1740     64
-#define GPU_ACCEL_NV_1750     32
-#define GPU_ACCEL_NV_1760     32
-#define GPU_ACCEL_NV_1800     2
-#define GPU_ACCEL_NV_2100     8
-#define GPU_ACCEL_NV_2400     64
-#define GPU_ACCEL_NV_2410     64
-#define GPU_ACCEL_NV_2500     8
-#define GPU_ACCEL_NV_2600     64
-#define GPU_ACCEL_NV_2611     64
-#define GPU_ACCEL_NV_2612     64
-#define GPU_ACCEL_NV_2711     64
-#define GPU_ACCEL_NV_2811     64
-#define GPU_ACCEL_NV_3000     64
-#define GPU_ACCEL_NV_3100     16
-#define GPU_ACCEL_NV_3200     2
-#define GPU_ACCEL_NV_3710     64
-#define GPU_ACCEL_NV_3711     64
-#define GPU_ACCEL_NV_3800     128
-#define GPU_ACCEL_NV_4300     64
-#define GPU_ACCEL_NV_4400     64
-#define GPU_ACCEL_NV_4500     64
-#define GPU_ACCEL_NV_4700     64
-#define GPU_ACCEL_NV_4800     128
-#define GPU_ACCEL_NV_4900     64
-#define GPU_ACCEL_NV_5000     64
-#define GPU_ACCEL_NV_5100     64
-#define GPU_ACCEL_NV_5200     8
-#define GPU_ACCEL_NV_5300     32
-#define GPU_ACCEL_NV_5400     32
-#define GPU_ACCEL_NV_5500     64
-#define GPU_ACCEL_NV_5600     8
-#define GPU_ACCEL_NV_5700     64
-#define GPU_ACCEL_NV_5800     8
-#define GPU_ACCEL_NV_6000     64
-#define GPU_ACCEL_NV_6100     8
-#define GPU_ACCEL_NV_6211     16
-#define GPU_ACCEL_NV_6212     8
-#define GPU_ACCEL_NV_6213     8
-#define GPU_ACCEL_NV_6221     4
-#define GPU_ACCEL_NV_6222     4
-#define GPU_ACCEL_NV_6223     4
-#define GPU_ACCEL_NV_6231     4
-#define GPU_ACCEL_NV_6232     4
-#define GPU_ACCEL_NV_6233     4
-#define GPU_ACCEL_NV_6241     32
-#define GPU_ACCEL_NV_6242     16
-#define GPU_ACCEL_NV_6243     16
-#define GPU_ACCEL_NV_6300     8
-#define GPU_ACCEL_NV_6400     8
-#define GPU_ACCEL_NV_6500     8
-#define GPU_ACCEL_NV_6600     8
-#define GPU_ACCEL_NV_6700     8
-#define GPU_ACCEL_NV_6800     8
-#define GPU_ACCEL_NV_6900     16
-#define GPU_ACCEL_NV_7100     2
-#define GPU_ACCEL_NV_7200     2
-#define GPU_ACCEL_NV_7300     64
-#define GPU_ACCEL_NV_7400     2
-#define GPU_ACCEL_NV_7500     8
-#define GPU_ACCEL_NV_7600     64
-#define GPU_ACCEL_NV_7700     16
-#define GPU_ACCEL_NV_7800     8
-#define GPU_ACCEL_NV_7900     2
-#define GPU_ACCEL_NV_8000     8
-#define GPU_ACCEL_NV_8100     64
-#define GPU_ACCEL_NV_8200     2
-#define GPU_ACCEL_NV_8300     64
-#define GPU_ACCEL_NV_8400     64
-#define GPU_ACCEL_NV_8500     64
-#define GPU_ACCEL_NV_8600     8
-#define GPU_ACCEL_NV_8700     8
-#define GPU_ACCEL_NV_8800     8
-#define GPU_ACCEL_NV_8900     4
-#define GPU_ACCEL_NV_9000     2
-#define GPU_ACCEL_NV_9100     8
-#define GPU_ACCEL_NV_9200     2
-#define GPU_ACCEL_NV_9300     4
-#define GPU_ACCEL_NV_9400     8
-#define GPU_ACCEL_NV_9500     8
-#define GPU_ACCEL_NV_9600     2
-#define GPU_ACCEL_NV_9700     8
-#define GPU_ACCEL_NV_9710     8
-#define GPU_ACCEL_NV_9720     8
-#define GPU_ACCEL_NV_9800     8
-#define GPU_ACCEL_NV_9810     8
-#define GPU_ACCEL_NV_9820     8
-#define GPU_ACCEL_NV_9900     64
-#define GPU_ACCEL_NV_10000    2
-#define GPU_ACCEL_NV_10100    128
-#define GPU_ACCEL_NV_10200    64
-#define GPU_ACCEL_NV_10300    8
-#define GPU_ACCEL_NV_10400    8
-#define GPU_ACCEL_NV_10410    8
-#define GPU_ACCEL_NV_10420    8
-#define GPU_ACCEL_NV_10500    64
-#define GPU_ACCEL_NV_10600    64
-#define GPU_ACCEL_NV_10700    1
-#define GPU_ACCEL_NV_10800    64
-#define GPU_ACCEL_NV_10900    2
-#define GPU_ACCEL_NV_11000    64
-#define GPU_ACCEL_NV_11100    64
-#define GPU_ACCEL_NV_11200    64
-#define GPU_ACCEL_NV_11300    2
-#define GPU_ACCEL_NV_11400    8
-#define GPU_ACCEL_NV_11500    128
-#define GPU_ACCEL_NV_11600    2
-#define GPU_ACCEL_NV_11700    4
-#define GPU_ACCEL_NV_11800    4
-#define GPU_ACCEL_NV_11900    2
-#define GPU_ACCEL_NV_12000    2
-#define GPU_ACCEL_NV_12100    2
-#define GPU_ACCEL_NV_12200    2
-#define GPU_ACCEL_NV_12300    2
-#define GPU_ACCEL_NV_12400    64
-#define GPU_ACCEL_NV_12500    8
-#define GPU_ACCEL_NV_12600    32
-#define GPU_ACCEL_NV_12700    64
-#define GPU_ACCEL_NV_12800    64
+#define KERNEL_ACCEL_0       128
+#define KERNEL_ACCEL_10      128
+#define KERNEL_ACCEL_11      128
+#define KERNEL_ACCEL_12      128
+#define KERNEL_ACCEL_20      64
+#define KERNEL_ACCEL_21      64
+#define KERNEL_ACCEL_22      64
+#define KERNEL_ACCEL_23      64
+#define KERNEL_ACCEL_30      128
+#define KERNEL_ACCEL_40      64
+#define KERNEL_ACCEL_50      64
+#define KERNEL_ACCEL_60      64
+#define KERNEL_ACCEL_100     64
+#define KERNEL_ACCEL_101     64
+#define KERNEL_ACCEL_110     64
+#define KERNEL_ACCEL_111     64
+#define KERNEL_ACCEL_112     64
+#define KERNEL_ACCEL_120     64
+#define KERNEL_ACCEL_121     64
+#define KERNEL_ACCEL_122     64
+#define KERNEL_ACCEL_124     64
+#define KERNEL_ACCEL_130     64
+#define KERNEL_ACCEL_131     64
+#define KERNEL_ACCEL_132     64
+#define KERNEL_ACCEL_133     64
+#define KERNEL_ACCEL_140     64
+#define KERNEL_ACCEL_141     64
+#define KERNEL_ACCEL_150     64
+#define KERNEL_ACCEL_160     64
+#define KERNEL_ACCEL_190     64
+#define KERNEL_ACCEL_200     64
+#define KERNEL_ACCEL_300     64
+#define KERNEL_ACCEL_400     8
+#define KERNEL_ACCEL_500     8
+#define KERNEL_ACCEL_501     8
+#define KERNEL_ACCEL_900     128
+#define KERNEL_ACCEL_910     128
+#define KERNEL_ACCEL_1000    128
+#define KERNEL_ACCEL_1100    64
+#define KERNEL_ACCEL_1400    64
+#define KERNEL_ACCEL_1410    64
+#define KERNEL_ACCEL_1420    64
+#define KERNEL_ACCEL_1421    64
+#define KERNEL_ACCEL_1430    64
+#define KERNEL_ACCEL_1440    64
+#define KERNEL_ACCEL_1441    64
+#define KERNEL_ACCEL_1450    32
+#define KERNEL_ACCEL_1460    32
+#define KERNEL_ACCEL_1500    16
+#define KERNEL_ACCEL_1600    8
+#define KERNEL_ACCEL_1700    64
+#define KERNEL_ACCEL_1710    64
+#define KERNEL_ACCEL_1711    64
+#define KERNEL_ACCEL_1720    64
+#define KERNEL_ACCEL_1722    64
+#define KERNEL_ACCEL_1730    64
+#define KERNEL_ACCEL_1731    64
+#define KERNEL_ACCEL_1740    64
+#define KERNEL_ACCEL_1750    32
+#define KERNEL_ACCEL_1760    32
+#define KERNEL_ACCEL_1800    2
+#define KERNEL_ACCEL_2100    8
+#define KERNEL_ACCEL_2400    64
+#define KERNEL_ACCEL_2410    64
+#define KERNEL_ACCEL_2500    8
+#define KERNEL_ACCEL_2600    64
+#define KERNEL_ACCEL_2611    64
+#define KERNEL_ACCEL_2612    64
+#define KERNEL_ACCEL_2711    64
+#define KERNEL_ACCEL_2811    64
+#define KERNEL_ACCEL_3000    128
+#define KERNEL_ACCEL_3100    16
+#define KERNEL_ACCEL_3200    2
+#define KERNEL_ACCEL_3710    64
+#define KERNEL_ACCEL_3711    64
+#define KERNEL_ACCEL_3800    128
+#define KERNEL_ACCEL_4300    64
+#define KERNEL_ACCEL_4400    64
+#define KERNEL_ACCEL_4500    64
+#define KERNEL_ACCEL_4700    64
+#define KERNEL_ACCEL_4800    128
+#define KERNEL_ACCEL_4900    64
+#define KERNEL_ACCEL_5000    64
+#define KERNEL_ACCEL_5100    64
+#define KERNEL_ACCEL_5200    8
+#define KERNEL_ACCEL_5300    32
+#define KERNEL_ACCEL_5400    32
+#define KERNEL_ACCEL_5500    64
+#define KERNEL_ACCEL_5600    64
+#define KERNEL_ACCEL_5700    64
+#define KERNEL_ACCEL_5800    8
+#define KERNEL_ACCEL_6000    64
+#define KERNEL_ACCEL_6100    8
+#define KERNEL_ACCEL_6211    16
+#define KERNEL_ACCEL_6212    8
+#define KERNEL_ACCEL_6213    8
+#define KERNEL_ACCEL_6221    4
+#define KERNEL_ACCEL_6222    4
+#define KERNEL_ACCEL_6223    4
+#define KERNEL_ACCEL_6231    4
+#define KERNEL_ACCEL_6232    4
+#define KERNEL_ACCEL_6233    4
+#define KERNEL_ACCEL_6241    32
+#define KERNEL_ACCEL_6242    16
+#define KERNEL_ACCEL_6243    16
+#define KERNEL_ACCEL_6300    8
+#define KERNEL_ACCEL_6400    8
+#define KERNEL_ACCEL_6500    8
+#define KERNEL_ACCEL_6600    8
+#define KERNEL_ACCEL_6700    8
+#define KERNEL_ACCEL_6800    8
+#define KERNEL_ACCEL_6900    16
+#define KERNEL_ACCEL_7100    2
+#define KERNEL_ACCEL_7200    2
+#define KERNEL_ACCEL_7300    64
+#define KERNEL_ACCEL_7400    2
+#define KERNEL_ACCEL_7500    8
+#define KERNEL_ACCEL_7600    64
+#define KERNEL_ACCEL_7700    16
+#define KERNEL_ACCEL_7800    8
+#define KERNEL_ACCEL_7900    2
+#define KERNEL_ACCEL_8000    8
+#define KERNEL_ACCEL_8100    64
+#define KERNEL_ACCEL_8200    2
+#define KERNEL_ACCEL_8300    64
+#define KERNEL_ACCEL_8400    64
+#define KERNEL_ACCEL_8500    64
+#define KERNEL_ACCEL_8600    8
+#define KERNEL_ACCEL_8700    8
+#define KERNEL_ACCEL_8800    8
+#define KERNEL_ACCEL_8900    16
+#define KERNEL_ACCEL_9000    2
+#define KERNEL_ACCEL_9100    8
+#define KERNEL_ACCEL_9200    2
+#define KERNEL_ACCEL_9300    2
+#define KERNEL_ACCEL_9400    8
+#define KERNEL_ACCEL_9500    8
+#define KERNEL_ACCEL_9600    2
+#define KERNEL_ACCEL_9700    8
+#define KERNEL_ACCEL_9710    8
+#define KERNEL_ACCEL_9720    8
+#define KERNEL_ACCEL_9800    8
+#define KERNEL_ACCEL_9810    8
+#define KERNEL_ACCEL_9820    8
+#define KERNEL_ACCEL_9900    64
+#define KERNEL_ACCEL_10000   2
+#define KERNEL_ACCEL_10100   128
+#define KERNEL_ACCEL_10200   64
+#define KERNEL_ACCEL_10300   8
+#define KERNEL_ACCEL_10400   8
+#define KERNEL_ACCEL_10410   8
+#define KERNEL_ACCEL_10420   8
+#define KERNEL_ACCEL_10500   64
+#define KERNEL_ACCEL_10600   64
+#define KERNEL_ACCEL_10700   1
+#define KERNEL_ACCEL_10800   64
+#define KERNEL_ACCEL_10900   2
+#define KERNEL_ACCEL_11000   64
+#define KERNEL_ACCEL_11100   64
+#define KERNEL_ACCEL_11200   64
+#define KERNEL_ACCEL_11300   2
+#define KERNEL_ACCEL_11400   8
+#define KERNEL_ACCEL_11500   128
+#define KERNEL_ACCEL_11600   2
+#define KERNEL_ACCEL_11700   4
+#define KERNEL_ACCEL_11800   4
+#define KERNEL_ACCEL_11900   2
+#define KERNEL_ACCEL_12000   2
+#define KERNEL_ACCEL_12100   2
+#define KERNEL_ACCEL_12200   2
+#define KERNEL_ACCEL_12300   2
+#define KERNEL_ACCEL_12400   64
+#define KERNEL_ACCEL_12500   8
+#define KERNEL_ACCEL_12600   32
+#define KERNEL_ACCEL_12700   64
+#define KERNEL_ACCEL_12800   64
+#define KERNEL_ACCEL_12900   8
+#define KERNEL_ACCEL_13000   8
 
-#define GPU_ACCEL_AMD_0       128
-#define GPU_ACCEL_AMD_10      128
-#define GPU_ACCEL_AMD_11      128
-#define GPU_ACCEL_AMD_12      128
-#define GPU_ACCEL_AMD_20      64
-#define GPU_ACCEL_AMD_21      64
-#define GPU_ACCEL_AMD_22      64
-#define GPU_ACCEL_AMD_23      64
-#define GPU_ACCEL_AMD_30      128
-#define GPU_ACCEL_AMD_40      64
-#define GPU_ACCEL_AMD_50      64
-#define GPU_ACCEL_AMD_60      64
-#define GPU_ACCEL_AMD_100     64
-#define GPU_ACCEL_AMD_101     64
-#define GPU_ACCEL_AMD_110     64
-#define GPU_ACCEL_AMD_111     64
-#define GPU_ACCEL_AMD_112     64
-#define GPU_ACCEL_AMD_120     64
-#define GPU_ACCEL_AMD_121     64
-#define GPU_ACCEL_AMD_122     64
-#define GPU_ACCEL_AMD_124     64
-#define GPU_ACCEL_AMD_130     64
-#define GPU_ACCEL_AMD_131     64
-#define GPU_ACCEL_AMD_132     64
-#define GPU_ACCEL_AMD_133     64
-#define GPU_ACCEL_AMD_140     64
-#define GPU_ACCEL_AMD_141     64
-#define GPU_ACCEL_AMD_150     64
-#define GPU_ACCEL_AMD_160     64
-#define GPU_ACCEL_AMD_190     64
-#define GPU_ACCEL_AMD_200     64
-#define GPU_ACCEL_AMD_300     64
-#define GPU_ACCEL_AMD_400     8
-#define GPU_ACCEL_AMD_500     8
-#define GPU_ACCEL_AMD_501     8
-#define GPU_ACCEL_AMD_900     128
-#define GPU_ACCEL_AMD_910     128
-#define GPU_ACCEL_AMD_1000    128
-#define GPU_ACCEL_AMD_1100    64
-#define GPU_ACCEL_AMD_1400    64
-#define GPU_ACCEL_AMD_1410    64
-#define GPU_ACCEL_AMD_1420    64
-#define GPU_ACCEL_AMD_1421    64
-#define GPU_ACCEL_AMD_1430    64
-#define GPU_ACCEL_AMD_1440    64
-#define GPU_ACCEL_AMD_1441    64
-#define GPU_ACCEL_AMD_1450    32
-#define GPU_ACCEL_AMD_1460    32
-#define GPU_ACCEL_AMD_1500    16
-#define GPU_ACCEL_AMD_1600    8
-#define GPU_ACCEL_AMD_1700    64
-#define GPU_ACCEL_AMD_1710    64
-#define GPU_ACCEL_AMD_1711    64
-#define GPU_ACCEL_AMD_1720    64
-#define GPU_ACCEL_AMD_1722    64
-#define GPU_ACCEL_AMD_1730    64
-#define GPU_ACCEL_AMD_1731    64
-#define GPU_ACCEL_AMD_1740    64
-#define GPU_ACCEL_AMD_1750    32
-#define GPU_ACCEL_AMD_1760    32
-#define GPU_ACCEL_AMD_1800    2
-#define GPU_ACCEL_AMD_2100    8
-#define GPU_ACCEL_AMD_2400    64
-#define GPU_ACCEL_AMD_2410    64
-#define GPU_ACCEL_AMD_2500    8
-#define GPU_ACCEL_AMD_2600    64
-#define GPU_ACCEL_AMD_2611    64
-#define GPU_ACCEL_AMD_2612    64
-#define GPU_ACCEL_AMD_2711    64
-#define GPU_ACCEL_AMD_2811    64
-#define GPU_ACCEL_AMD_3000    128
-#define GPU_ACCEL_AMD_3100    16
-#define GPU_ACCEL_AMD_3200    2
-#define GPU_ACCEL_AMD_3710    64
-#define GPU_ACCEL_AMD_3711    64
-#define GPU_ACCEL_AMD_3800    128
-#define GPU_ACCEL_AMD_4300    64
-#define GPU_ACCEL_AMD_4400    64
-#define GPU_ACCEL_AMD_4500    64
-#define GPU_ACCEL_AMD_4700    64
-#define GPU_ACCEL_AMD_4800    128
-#define GPU_ACCEL_AMD_4900    64
-#define GPU_ACCEL_AMD_5000    64
-#define GPU_ACCEL_AMD_5100    64
-#define GPU_ACCEL_AMD_5200    8
-#define GPU_ACCEL_AMD_5300    32
-#define GPU_ACCEL_AMD_5400    32
-#define GPU_ACCEL_AMD_5500    64
-#define GPU_ACCEL_AMD_5600    64
-#define GPU_ACCEL_AMD_5700    64
-#define GPU_ACCEL_AMD_5800    8
-#define GPU_ACCEL_AMD_6000    64
-#define GPU_ACCEL_AMD_6100    8
-#define GPU_ACCEL_AMD_6211    16
-#define GPU_ACCEL_AMD_6212    8
-#define GPU_ACCEL_AMD_6213    8
-#define GPU_ACCEL_AMD_6221    4
-#define GPU_ACCEL_AMD_6222    4
-#define GPU_ACCEL_AMD_6223    4
-#define GPU_ACCEL_AMD_6231    4
-#define GPU_ACCEL_AMD_6232    4
-#define GPU_ACCEL_AMD_6233    4
-#define GPU_ACCEL_AMD_6241    32
-#define GPU_ACCEL_AMD_6242    16
-#define GPU_ACCEL_AMD_6243    16
-#define GPU_ACCEL_AMD_6300    8
-#define GPU_ACCEL_AMD_6400    8
-#define GPU_ACCEL_AMD_6500    8
-#define GPU_ACCEL_AMD_6600    8
-#define GPU_ACCEL_AMD_6700    8
-#define GPU_ACCEL_AMD_6800    8
-#define GPU_ACCEL_AMD_6900    16
-#define GPU_ACCEL_AMD_7100    2
-#define GPU_ACCEL_AMD_7200    2
-#define GPU_ACCEL_AMD_7300    64
-#define GPU_ACCEL_AMD_7400    2
-#define GPU_ACCEL_AMD_7500    8
-#define GPU_ACCEL_AMD_7600    64
-#define GPU_ACCEL_AMD_7700    16
-#define GPU_ACCEL_AMD_7800    8
-#define GPU_ACCEL_AMD_7900    2
-#define GPU_ACCEL_AMD_8000    8
-#define GPU_ACCEL_AMD_8100    64
-#define GPU_ACCEL_AMD_8200    2
-#define GPU_ACCEL_AMD_8300    64
-#define GPU_ACCEL_AMD_8400    64
-#define GPU_ACCEL_AMD_8500    64
-#define GPU_ACCEL_AMD_8600    8
-#define GPU_ACCEL_AMD_8700    8
-#define GPU_ACCEL_AMD_8800    8
-#define GPU_ACCEL_AMD_8900    4
-#define GPU_ACCEL_AMD_9000    2
-#define GPU_ACCEL_AMD_9100    8
-#define GPU_ACCEL_AMD_9200    2
-#define GPU_ACCEL_AMD_9300    4
-#define GPU_ACCEL_AMD_9400    8
-#define GPU_ACCEL_AMD_9500    8
-#define GPU_ACCEL_AMD_9600    2
-#define GPU_ACCEL_AMD_9700    8
-#define GPU_ACCEL_AMD_9710    8
-#define GPU_ACCEL_AMD_9720    8
-#define GPU_ACCEL_AMD_9800    8
-#define GPU_ACCEL_AMD_9810    8
-#define GPU_ACCEL_AMD_9820    8
-#define GPU_ACCEL_AMD_9900    64
-#define GPU_ACCEL_AMD_10000   2
-#define GPU_ACCEL_AMD_10100   128
-#define GPU_ACCEL_AMD_10200   64
-#define GPU_ACCEL_AMD_10300   8
-#define GPU_ACCEL_AMD_10400   8
-#define GPU_ACCEL_AMD_10410   8
-#define GPU_ACCEL_AMD_10420   8
-#define GPU_ACCEL_AMD_10500   64
-#define GPU_ACCEL_AMD_10600   64
-#define GPU_ACCEL_AMD_10700   1
-#define GPU_ACCEL_AMD_10800   64
-#define GPU_ACCEL_AMD_10900   2
-#define GPU_ACCEL_AMD_11000   64
-#define GPU_ACCEL_AMD_11100   64
-#define GPU_ACCEL_AMD_11200   64
-#define GPU_ACCEL_AMD_11300   2
-#define GPU_ACCEL_AMD_11400   8
-#define GPU_ACCEL_AMD_11500   128
-#define GPU_ACCEL_AMD_11600   2
-#define GPU_ACCEL_AMD_11700   4
-#define GPU_ACCEL_AMD_11800   4
-#define GPU_ACCEL_AMD_11900   2
-#define GPU_ACCEL_AMD_12000   2
-#define GPU_ACCEL_AMD_12100   2
-#define GPU_ACCEL_AMD_12200   2
-#define GPU_ACCEL_AMD_12300   2
-#define GPU_ACCEL_AMD_12400   64
-#define GPU_ACCEL_AMD_12500   8
-#define GPU_ACCEL_AMD_12600   32
-#define GPU_ACCEL_AMD_12700   64
-#define GPU_ACCEL_AMD_12800   64
-
-#define GPU_LOOPS_NV_0        512
-#define GPU_LOOPS_NV_10       512
-#define GPU_LOOPS_NV_11       512
-#define GPU_LOOPS_NV_12       512
-#define GPU_LOOPS_NV_20       128
-#define GPU_LOOPS_NV_21       128
-#define GPU_LOOPS_NV_22       128
-#define GPU_LOOPS_NV_23       128
-#define GPU_LOOPS_NV_30       512
-#define GPU_LOOPS_NV_40       128
-#define GPU_LOOPS_NV_50       64
-#define GPU_LOOPS_NV_60       64
-#define GPU_LOOPS_NV_100      128
-#define GPU_LOOPS_NV_101      128
-#define GPU_LOOPS_NV_110      128
-#define GPU_LOOPS_NV_111      128
-#define GPU_LOOPS_NV_112      128
-#define GPU_LOOPS_NV_120      64
-#define GPU_LOOPS_NV_121      64
-#define GPU_LOOPS_NV_122      64
-#define GPU_LOOPS_NV_124      64
-#define GPU_LOOPS_NV_130      64
-#define GPU_LOOPS_NV_131      64
-#define GPU_LOOPS_NV_132      64
-#define GPU_LOOPS_NV_133      64
-#define GPU_LOOPS_NV_140      64
-#define GPU_LOOPS_NV_141      64
-#define GPU_LOOPS_NV_150      32
-#define GPU_LOOPS_NV_160      32
-#define GPU_LOOPS_NV_190      64
-#define GPU_LOOPS_NV_200      64
-#define GPU_LOOPS_NV_300      64
-#define GPU_LOOPS_NV_400      256
-#define GPU_LOOPS_NV_500      200
-#define GPU_LOOPS_NV_501      200
-#define GPU_LOOPS_NV_900      512
-#define GPU_LOOPS_NV_910      512
-#define GPU_LOOPS_NV_1000     512
-#define GPU_LOOPS_NV_1100     256
-#define GPU_LOOPS_NV_1400     128
-#define GPU_LOOPS_NV_1410     128
-#define GPU_LOOPS_NV_1420     64
-#define GPU_LOOPS_NV_1421     64
-#define GPU_LOOPS_NV_1430     128
-#define GPU_LOOPS_NV_1440     64
-#define GPU_LOOPS_NV_1441     64
-#define GPU_LOOPS_NV_1450     16
-#define GPU_LOOPS_NV_1460     16
-#define GPU_LOOPS_NV_1500     512
-#define GPU_LOOPS_NV_1600     256
-#define GPU_LOOPS_NV_1700     32
-#define GPU_LOOPS_NV_1710     32
-#define GPU_LOOPS_NV_1711     32
-#define GPU_LOOPS_NV_1720     16
-#define GPU_LOOPS_NV_1722     16
-#define GPU_LOOPS_NV_1730     32
-#define GPU_LOOPS_NV_1731     32
-#define GPU_LOOPS_NV_1740     16
-#define GPU_LOOPS_NV_1750     16
-#define GPU_LOOPS_NV_1760     16
-#define GPU_LOOPS_NV_1800     200
-#define GPU_LOOPS_NV_2100     256
-#define GPU_LOOPS_NV_2400     512
-#define GPU_LOOPS_NV_2410     512
-#define GPU_LOOPS_NV_2500     256
-#define GPU_LOOPS_NV_2600     256
-#define GPU_LOOPS_NV_2611     256
-#define GPU_LOOPS_NV_2612     256
-#define GPU_LOOPS_NV_2711     128
-#define GPU_LOOPS_NV_2811     128
-#define GPU_LOOPS_NV_3000     512
-#define GPU_LOOPS_NV_3100     64
-#define GPU_LOOPS_NV_3200     16
-#define GPU_LOOPS_NV_3710     128
-#define GPU_LOOPS_NV_3711     128
-#define GPU_LOOPS_NV_3800     512
-#define GPU_LOOPS_NV_4300     256
-#define GPU_LOOPS_NV_4400     128
-#define GPU_LOOPS_NV_4500     128
-#define GPU_LOOPS_NV_4700     128
-#define GPU_LOOPS_NV_4800     512
-#define GPU_LOOPS_NV_4900     128
-#define GPU_LOOPS_NV_5000     16
-#define GPU_LOOPS_NV_5100     512
-#define GPU_LOOPS_NV_5200     256
-#define GPU_LOOPS_NV_5300     64
-#define GPU_LOOPS_NV_5400     64
-#define GPU_LOOPS_NV_5500     128
-#define GPU_LOOPS_NV_5600     128
-#define GPU_LOOPS_NV_5700     256
-#define GPU_LOOPS_NV_5800     256
-#define GPU_LOOPS_NV_6000     128
-#define GPU_LOOPS_NV_6100     64
-#define GPU_LOOPS_NV_6211     200
-#define GPU_LOOPS_NV_6212     200
-#define GPU_LOOPS_NV_6213     200
-#define GPU_LOOPS_NV_6221     200
-#define GPU_LOOPS_NV_6222     200
-#define GPU_LOOPS_NV_6223     200
-#define GPU_LOOPS_NV_6231     200
-#define GPU_LOOPS_NV_6232     200
-#define GPU_LOOPS_NV_6233     200
-#define GPU_LOOPS_NV_6241     200
-#define GPU_LOOPS_NV_6242     200
-#define GPU_LOOPS_NV_6243     200
-#define GPU_LOOPS_NV_6300     256
-#define GPU_LOOPS_NV_6400     256
-#define GPU_LOOPS_NV_6500     256
-#define GPU_LOOPS_NV_6600     200
-#define GPU_LOOPS_NV_6700     256
-#define GPU_LOOPS_NV_6800     200
-#define GPU_LOOPS_NV_6900     64
-#define GPU_LOOPS_NV_7100     256
-#define GPU_LOOPS_NV_7200     200
-#define GPU_LOOPS_NV_7300     32
-#define GPU_LOOPS_NV_7400     200
-#define GPU_LOOPS_NV_7500     32
-#define GPU_LOOPS_NV_7600     128
-#define GPU_LOOPS_NV_7700     128
-#define GPU_LOOPS_NV_7800     256
-#define GPU_LOOPS_NV_7900     128
-#define GPU_LOOPS_NV_8000     64
-#define GPU_LOOPS_NV_8100     64
-#define GPU_LOOPS_NV_8200     200
-#define GPU_LOOPS_NV_8300     64
-#define GPU_LOOPS_NV_8400     32
-#define GPU_LOOPS_NV_8500     128
-#define GPU_LOOPS_NV_8600     32
-#define GPU_LOOPS_NV_8700     32
-#define GPU_LOOPS_NV_8800     256
-#define GPU_LOOPS_NV_8900     1
-#define GPU_LOOPS_NV_9000     16
-#define GPU_LOOPS_NV_9100     256
-#define GPU_LOOPS_NV_9200     200
-#define GPU_LOOPS_NV_9300     1
-#define GPU_LOOPS_NV_9400     200
-#define GPU_LOOPS_NV_9500     200
-#define GPU_LOOPS_NV_9600     200
-#define GPU_LOOPS_NV_9700     200
-#define GPU_LOOPS_NV_9710     200
-#define GPU_LOOPS_NV_9720     200
-#define GPU_LOOPS_NV_9800     200
-#define GPU_LOOPS_NV_9810     200
-#define GPU_LOOPS_NV_9820     200
-#define GPU_LOOPS_NV_9900     512
-#define GPU_LOOPS_NV_10000    200
-#define GPU_LOOPS_NV_10100    512
-#define GPU_LOOPS_NV_10200    64
-#define GPU_LOOPS_NV_10300    128
-#define GPU_LOOPS_NV_10400    256
-#define GPU_LOOPS_NV_10410    256
-#define GPU_LOOPS_NV_10420    256
-#define GPU_LOOPS_NV_10500    64
-#define GPU_LOOPS_NV_10600    128
-#define GPU_LOOPS_NV_10700    64
-#define GPU_LOOPS_NV_10800    32
-#define GPU_LOOPS_NV_10900    200
-#define GPU_LOOPS_NV_11000    128
-#define GPU_LOOPS_NV_11100    128
-#define GPU_LOOPS_NV_11200    128
-#define GPU_LOOPS_NV_11300    256
-#define GPU_LOOPS_NV_11400    256
-#define GPU_LOOPS_NV_11500    512
-#define GPU_LOOPS_NV_11600    512
-#define GPU_LOOPS_NV_11700    64
-#define GPU_LOOPS_NV_11800    64
-#define GPU_LOOPS_NV_11900    200
-#define GPU_LOOPS_NV_12000    200
-#define GPU_LOOPS_NV_12100    200
-#define GPU_LOOPS_NV_12200    256
-#define GPU_LOOPS_NV_12300    256
-#define GPU_LOOPS_NV_12400    256
-#define GPU_LOOPS_NV_12500    256
-#define GPU_LOOPS_NV_12600    16
-#define GPU_LOOPS_NV_12700    10
-#define GPU_LOOPS_NV_12800    100
-
-#define GPU_LOOPS_AMD_0       256
-#define GPU_LOOPS_AMD_10      256
-#define GPU_LOOPS_AMD_11      256
-#define GPU_LOOPS_AMD_12      256
-#define GPU_LOOPS_AMD_20      256
-#define GPU_LOOPS_AMD_21      256
-#define GPU_LOOPS_AMD_22      256
-#define GPU_LOOPS_AMD_23      256
-#define GPU_LOOPS_AMD_30      256
-#define GPU_LOOPS_AMD_40      256
-#define GPU_LOOPS_AMD_50      64
-#define GPU_LOOPS_AMD_60      64
-#define GPU_LOOPS_AMD_100     128
-#define GPU_LOOPS_AMD_101     128
-#define GPU_LOOPS_AMD_110     128
-#define GPU_LOOPS_AMD_111     128
-#define GPU_LOOPS_AMD_112     128
-#define GPU_LOOPS_AMD_120     128
-#define GPU_LOOPS_AMD_121     128
-#define GPU_LOOPS_AMD_122     128
-#define GPU_LOOPS_AMD_124     128
-#define GPU_LOOPS_AMD_130     128
-#define GPU_LOOPS_AMD_131     128
-#define GPU_LOOPS_AMD_132     128
-#define GPU_LOOPS_AMD_133     128
-#define GPU_LOOPS_AMD_140     128
-#define GPU_LOOPS_AMD_141     128
-#define GPU_LOOPS_AMD_150     64
-#define GPU_LOOPS_AMD_160     64
-#define GPU_LOOPS_AMD_190     128
-#define GPU_LOOPS_AMD_200     128
-#define GPU_LOOPS_AMD_300     64
-#define GPU_LOOPS_AMD_400     256
-#define GPU_LOOPS_AMD_500     256
-#define GPU_LOOPS_AMD_501     256
-#define GPU_LOOPS_AMD_900     256
-#define GPU_LOOPS_AMD_910     256
-#define GPU_LOOPS_AMD_1000    256
-#define GPU_LOOPS_AMD_1100    128
-#define GPU_LOOPS_AMD_1400    64
-#define GPU_LOOPS_AMD_1410    64
-#define GPU_LOOPS_AMD_1420    64
-#define GPU_LOOPS_AMD_1421    64
-#define GPU_LOOPS_AMD_1430    64
-#define GPU_LOOPS_AMD_1440    64
-#define GPU_LOOPS_AMD_1441    64
-#define GPU_LOOPS_AMD_1450    32
-#define GPU_LOOPS_AMD_1460    32
-#define GPU_LOOPS_AMD_1500    256
-#define GPU_LOOPS_AMD_1600    256
-#define GPU_LOOPS_AMD_1700    32
-#define GPU_LOOPS_AMD_1710    32
-#define GPU_LOOPS_AMD_1711    32
-#define GPU_LOOPS_AMD_1720    32
-#define GPU_LOOPS_AMD_1722    32
-#define GPU_LOOPS_AMD_1730    32
-#define GPU_LOOPS_AMD_1731    32
-#define GPU_LOOPS_AMD_1740    32
-#define GPU_LOOPS_AMD_1750    16
-#define GPU_LOOPS_AMD_1760    16
-#define GPU_LOOPS_AMD_1800    16
-#define GPU_LOOPS_AMD_2100    256
-#define GPU_LOOPS_AMD_2400    256
-#define GPU_LOOPS_AMD_2410    256
-#define GPU_LOOPS_AMD_2500    256
-#define GPU_LOOPS_AMD_2600    128
-#define GPU_LOOPS_AMD_2611    128
-#define GPU_LOOPS_AMD_2612    128
-#define GPU_LOOPS_AMD_2711    64
-#define GPU_LOOPS_AMD_2811    64
-#define GPU_LOOPS_AMD_3000    256
-#define GPU_LOOPS_AMD_3100    16
-#define GPU_LOOPS_AMD_3200    16
-#define GPU_LOOPS_AMD_3710    128
-#define GPU_LOOPS_AMD_3711    128
-#define GPU_LOOPS_AMD_3800    256
-#define GPU_LOOPS_AMD_4300    128
-#define GPU_LOOPS_AMD_4400    128
-#define GPU_LOOPS_AMD_4500    128
-#define GPU_LOOPS_AMD_4700    128
-#define GPU_LOOPS_AMD_4800    256
-#define GPU_LOOPS_AMD_4900    128
-#define GPU_LOOPS_AMD_5000    64
-#define GPU_LOOPS_AMD_5100    256
-#define GPU_LOOPS_AMD_5200    256
-#define GPU_LOOPS_AMD_5300    32
-#define GPU_LOOPS_AMD_5400    32
-#define GPU_LOOPS_AMD_5500    128
-#define GPU_LOOPS_AMD_5600    64
-#define GPU_LOOPS_AMD_5700    64
-#define GPU_LOOPS_AMD_5800    256
-#define GPU_LOOPS_AMD_6000    64
-#define GPU_LOOPS_AMD_6100    64
-#define GPU_LOOPS_AMD_6211    200
-#define GPU_LOOPS_AMD_6212    200
-#define GPU_LOOPS_AMD_6213    200
-#define GPU_LOOPS_AMD_6221    200
-#define GPU_LOOPS_AMD_6222    200
-#define GPU_LOOPS_AMD_6223    200
-#define GPU_LOOPS_AMD_6231    200
-#define GPU_LOOPS_AMD_6232    200
-#define GPU_LOOPS_AMD_6233    200
-#define GPU_LOOPS_AMD_6241    200
-#define GPU_LOOPS_AMD_6242    200
-#define GPU_LOOPS_AMD_6243    200
-#define GPU_LOOPS_AMD_6300    256
-#define GPU_LOOPS_AMD_6400    256
-#define GPU_LOOPS_AMD_6500    256
-#define GPU_LOOPS_AMD_6600    200
-#define GPU_LOOPS_AMD_6700    256
-#define GPU_LOOPS_AMD_6800    200
-#define GPU_LOOPS_AMD_6900    64
-#define GPU_LOOPS_AMD_7100    256
-#define GPU_LOOPS_AMD_7200    200
-#define GPU_LOOPS_AMD_7300    64
-#define GPU_LOOPS_AMD_7400    200
-#define GPU_LOOPS_AMD_7500    16
-#define GPU_LOOPS_AMD_7600    128
-#define GPU_LOOPS_AMD_7700    128
-#define GPU_LOOPS_AMD_7800    64
-#define GPU_LOOPS_AMD_7900    256
-#define GPU_LOOPS_AMD_8000    64
-#define GPU_LOOPS_AMD_8100    128
-#define GPU_LOOPS_AMD_8200    200
-#define GPU_LOOPS_AMD_8300    64
-#define GPU_LOOPS_AMD_8400    64
-#define GPU_LOOPS_AMD_8500    16
-#define GPU_LOOPS_AMD_8600    16
-#define GPU_LOOPS_AMD_8700    16
-#define GPU_LOOPS_AMD_8800    256
-#define GPU_LOOPS_AMD_8900    1
-#define GPU_LOOPS_AMD_9000    16
-#define GPU_LOOPS_AMD_9100    256
-#define GPU_LOOPS_AMD_9200    200
-#define GPU_LOOPS_AMD_9300    1
-#define GPU_LOOPS_AMD_9400    200
-#define GPU_LOOPS_AMD_9500    200
-#define GPU_LOOPS_AMD_9600    200
-#define GPU_LOOPS_AMD_9700    200
-#define GPU_LOOPS_AMD_9710    200
-#define GPU_LOOPS_AMD_9720    200
-#define GPU_LOOPS_AMD_9800    200
-#define GPU_LOOPS_AMD_9810    200
-#define GPU_LOOPS_AMD_9820    200
-#define GPU_LOOPS_AMD_9900    256
-#define GPU_LOOPS_AMD_10000   200
-#define GPU_LOOPS_AMD_10100   512
-#define GPU_LOOPS_AMD_10200   64
-#define GPU_LOOPS_AMD_10300   128
-#define GPU_LOOPS_AMD_10400   256
-#define GPU_LOOPS_AMD_10410   256
-#define GPU_LOOPS_AMD_10420   256
-#define GPU_LOOPS_AMD_10500   64
-#define GPU_LOOPS_AMD_10600   64
-#define GPU_LOOPS_AMD_10700   64
-#define GPU_LOOPS_AMD_10800   32
-#define GPU_LOOPS_AMD_10900   200
-#define GPU_LOOPS_AMD_11000   256
-#define GPU_LOOPS_AMD_11100   128
-#define GPU_LOOPS_AMD_11200   128
-#define GPU_LOOPS_AMD_11300   256
-#define GPU_LOOPS_AMD_11400   128
-#define GPU_LOOPS_AMD_11500   256
-#define GPU_LOOPS_AMD_11600   512
-#define GPU_LOOPS_AMD_11700   64
-#define GPU_LOOPS_AMD_11800   64
-#define GPU_LOOPS_AMD_11900   200
-#define GPU_LOOPS_AMD_12000   200
-#define GPU_LOOPS_AMD_12100   200
-#define GPU_LOOPS_AMD_12200   256
-#define GPU_LOOPS_AMD_12300   256
-#define GPU_LOOPS_AMD_12400   256
-#define GPU_LOOPS_AMD_12500   256
-#define GPU_LOOPS_AMD_12600   32
-#define GPU_LOOPS_AMD_12700   10
-#define GPU_LOOPS_AMD_12800   100
+#define KERNEL_LOOPS_0       256
+#define KERNEL_LOOPS_10      256
+#define KERNEL_LOOPS_11      256
+#define KERNEL_LOOPS_12      256
+#define KERNEL_LOOPS_20      256
+#define KERNEL_LOOPS_21      256
+#define KERNEL_LOOPS_22      256
+#define KERNEL_LOOPS_23      256
+#define KERNEL_LOOPS_30      256
+#define KERNEL_LOOPS_40      256
+#define KERNEL_LOOPS_50      64
+#define KERNEL_LOOPS_60      64
+#define KERNEL_LOOPS_100     128
+#define KERNEL_LOOPS_101     128
+#define KERNEL_LOOPS_110     128
+#define KERNEL_LOOPS_111     128
+#define KERNEL_LOOPS_112     128
+#define KERNEL_LOOPS_120     128
+#define KERNEL_LOOPS_121     128
+#define KERNEL_LOOPS_122     128
+#define KERNEL_LOOPS_124     128
+#define KERNEL_LOOPS_130     128
+#define KERNEL_LOOPS_131     128
+#define KERNEL_LOOPS_132     128
+#define KERNEL_LOOPS_133     128
+#define KERNEL_LOOPS_140     128
+#define KERNEL_LOOPS_141     128
+#define KERNEL_LOOPS_150     64
+#define KERNEL_LOOPS_160     64
+#define KERNEL_LOOPS_190     128
+#define KERNEL_LOOPS_200     128
+#define KERNEL_LOOPS_300     64
+#define KERNEL_LOOPS_400     256
+#define KERNEL_LOOPS_500     256
+#define KERNEL_LOOPS_501     256
+#define KERNEL_LOOPS_900     256
+#define KERNEL_LOOPS_910     256
+#define KERNEL_LOOPS_1000    256
+#define KERNEL_LOOPS_1100    128
+#define KERNEL_LOOPS_1400    64
+#define KERNEL_LOOPS_1410    64
+#define KERNEL_LOOPS_1420    64
+#define KERNEL_LOOPS_1421    64
+#define KERNEL_LOOPS_1430    64
+#define KERNEL_LOOPS_1440    64
+#define KERNEL_LOOPS_1441    64
+#define KERNEL_LOOPS_1450    32
+#define KERNEL_LOOPS_1460    32
+#define KERNEL_LOOPS_1500    256
+#define KERNEL_LOOPS_1600    256
+#define KERNEL_LOOPS_1700    32
+#define KERNEL_LOOPS_1710    32
+#define KERNEL_LOOPS_1711    32
+#define KERNEL_LOOPS_1720    32
+#define KERNEL_LOOPS_1722    32
+#define KERNEL_LOOPS_1730    32
+#define KERNEL_LOOPS_1731    32
+#define KERNEL_LOOPS_1740    32
+#define KERNEL_LOOPS_1750    16
+#define KERNEL_LOOPS_1760    16
+#define KERNEL_LOOPS_1800    16
+#define KERNEL_LOOPS_2100    256
+#define KERNEL_LOOPS_2400    256
+#define KERNEL_LOOPS_2410    256
+#define KERNEL_LOOPS_2500    256
+#define KERNEL_LOOPS_2600    128
+#define KERNEL_LOOPS_2611    128
+#define KERNEL_LOOPS_2612    128
+#define KERNEL_LOOPS_2711    64
+#define KERNEL_LOOPS_2811    64
+#define KERNEL_LOOPS_3000    256
+#define KERNEL_LOOPS_3100    16
+#define KERNEL_LOOPS_3200    16
+#define KERNEL_LOOPS_3710    128
+#define KERNEL_LOOPS_3711    128
+#define KERNEL_LOOPS_3800    256
+#define KERNEL_LOOPS_4300    128
+#define KERNEL_LOOPS_4400    128
+#define KERNEL_LOOPS_4500    128
+#define KERNEL_LOOPS_4700    128
+#define KERNEL_LOOPS_4800    256
+#define KERNEL_LOOPS_4900    128
+#define KERNEL_LOOPS_5000    64
+#define KERNEL_LOOPS_5100    256
+#define KERNEL_LOOPS_5200    256
+#define KERNEL_LOOPS_5300    32
+#define KERNEL_LOOPS_5400    32
+#define KERNEL_LOOPS_5500    128
+#define KERNEL_LOOPS_5600    64
+#define KERNEL_LOOPS_5700    64
+#define KERNEL_LOOPS_5800    256
+#define KERNEL_LOOPS_6000    64
+#define KERNEL_LOOPS_6100    64
+#define KERNEL_LOOPS_6211    200
+#define KERNEL_LOOPS_6212    200
+#define KERNEL_LOOPS_6213    200
+#define KERNEL_LOOPS_6221    200
+#define KERNEL_LOOPS_6222    200
+#define KERNEL_LOOPS_6223    200
+#define KERNEL_LOOPS_6231    200
+#define KERNEL_LOOPS_6232    200
+#define KERNEL_LOOPS_6233    200
+#define KERNEL_LOOPS_6241    200
+#define KERNEL_LOOPS_6242    200
+#define KERNEL_LOOPS_6243    200
+#define KERNEL_LOOPS_6300    256
+#define KERNEL_LOOPS_6400    256
+#define KERNEL_LOOPS_6500    256
+#define KERNEL_LOOPS_6600    200
+#define KERNEL_LOOPS_6700    256
+#define KERNEL_LOOPS_6800    200
+#define KERNEL_LOOPS_6900    64
+#define KERNEL_LOOPS_7100    256
+#define KERNEL_LOOPS_7200    200
+#define KERNEL_LOOPS_7300    64
+#define KERNEL_LOOPS_7400    200
+#define KERNEL_LOOPS_7500    16
+#define KERNEL_LOOPS_7600    128
+#define KERNEL_LOOPS_7700    128
+#define KERNEL_LOOPS_7800    64
+#define KERNEL_LOOPS_7900    256
+#define KERNEL_LOOPS_8000    64
+#define KERNEL_LOOPS_8100    128
+#define KERNEL_LOOPS_8200    200
+#define KERNEL_LOOPS_8300    64
+#define KERNEL_LOOPS_8400    64
+#define KERNEL_LOOPS_8500    16
+#define KERNEL_LOOPS_8600    16
+#define KERNEL_LOOPS_8700    16
+#define KERNEL_LOOPS_8800    256
+#define KERNEL_LOOPS_8900    1
+#define KERNEL_LOOPS_9000    16
+#define KERNEL_LOOPS_9100    256
+#define KERNEL_LOOPS_9200    200
+#define KERNEL_LOOPS_9300    1
+#define KERNEL_LOOPS_9400    200
+#define KERNEL_LOOPS_9500    200
+#define KERNEL_LOOPS_9600    200
+#define KERNEL_LOOPS_9700    200
+#define KERNEL_LOOPS_9710    200
+#define KERNEL_LOOPS_9720    200
+#define KERNEL_LOOPS_9800    200
+#define KERNEL_LOOPS_9810    200
+#define KERNEL_LOOPS_9820    200
+#define KERNEL_LOOPS_9900    256
+#define KERNEL_LOOPS_10000   200
+#define KERNEL_LOOPS_10100   512
+#define KERNEL_LOOPS_10200   64
+#define KERNEL_LOOPS_10300   128
+#define KERNEL_LOOPS_10400   256
+#define KERNEL_LOOPS_10410   256
+#define KERNEL_LOOPS_10420   256
+#define KERNEL_LOOPS_10500   64
+#define KERNEL_LOOPS_10600   64
+#define KERNEL_LOOPS_10700   64
+#define KERNEL_LOOPS_10800   32
+#define KERNEL_LOOPS_10900   200
+#define KERNEL_LOOPS_11000   256
+#define KERNEL_LOOPS_11100   128
+#define KERNEL_LOOPS_11200   128
+#define KERNEL_LOOPS_11300   256
+#define KERNEL_LOOPS_11400   128
+#define KERNEL_LOOPS_11500   256
+#define KERNEL_LOOPS_11600   512
+#define KERNEL_LOOPS_11700   64
+#define KERNEL_LOOPS_11800   64
+#define KERNEL_LOOPS_11900   200
+#define KERNEL_LOOPS_12000   200
+#define KERNEL_LOOPS_12100   200
+#define KERNEL_LOOPS_12200   256
+#define KERNEL_LOOPS_12300   256
+#define KERNEL_LOOPS_12400   256
+#define KERNEL_LOOPS_12500   256
+#define KERNEL_LOOPS_12600   32
+#define KERNEL_LOOPS_12700   10
+#define KERNEL_LOOPS_12800   100
+#define KERNEL_LOOPS_12900   64
+#define KERNEL_LOOPS_13000   64
 
 /**
  * Strings
@@ -1039,6 +677,8 @@ extern hc_thread_mutex_t mux_display;
 #define HT_12600  "ColdFusion 10+"
 #define HT_12700  "Blockchain, My Wallet"
 #define HT_12800  "MS-AzureSync PBKDF2-HMAC-SHA256"
+#define HT_12900  "Android FDE (Samsung DEK)"
+#define HT_13000  "RAR5"
 
 #define HT_00011  "Joomla < 2.5.18"
 #define HT_00012  "PostgreSQL"
@@ -1368,6 +1008,10 @@ extern hc_thread_mutex_t mux_display;
 #define DISPLAY_LEN_MAX_12700  1 + 10 + 1 + 5 + 1 + 20000
 #define DISPLAY_LEN_MIN_12800 11 + 1 + 20 + 1 + 1 + 1 + 64
 #define DISPLAY_LEN_MAX_12800 11 + 1 + 20 + 1 + 5 + 1 + 64
+#define DISPLAY_LEN_MIN_12900 64 + 64 + 32
+#define DISPLAY_LEN_MAX_12900 64 + 64 + 32
+#define DISPLAY_LEN_MIN_13000 1 + 4 + 1 + 2 + 1 + 32 + 1 + 2 + 1 + 32 + 1 + 1 + 1 + 16
+#define DISPLAY_LEN_MAX_13000 1 + 4 + 1 + 2 + 1 + 32 + 1 + 2 + 1 + 32 + 1 + 1 + 1 + 16
 
 #define DISPLAY_LEN_MIN_11    32 + 1 + 16
 #define DISPLAY_LEN_MAX_11    32 + 1 + 32
@@ -1624,6 +1268,8 @@ extern hc_thread_mutex_t mux_display;
 #define KERN_TYPE_CF10            12600
 #define KERN_TYPE_MYWALLET        12700
 #define KERN_TYPE_MS_DRSR         12800
+#define KERN_TYPE_ANDROIDFDE_SAMSUNG  12900
+#define KERN_TYPE_RAR5            13000
 
 /**
  * signatures
@@ -1692,6 +1338,7 @@ extern hc_thread_mutex_t mux_display;
 #define SIGNATURE_RAR3            "$RAR3$"
 #define SIGNATURE_MYWALLET        "$blockchain$"
 #define SIGNATURE_MS_DRSR         "v1;PPH1_MD4"
+#define SIGNATURE_RAR5            "$rar5$"
 
 /**
  * Default iteration numbers
@@ -1741,6 +1388,8 @@ extern hc_thread_mutex_t mux_display;
 #define ROUNDS_RAR3           262144
 #define ROUNDS_MYWALLET       10
 #define ROUNDS_MS_DRSR        100
+#define ROUNDS_ANDROIDFDE_SAMSUNG 4096
+#define ROUNDS_RAR5           (1 << 15)
 
 /**
  * salt types
@@ -1769,7 +1418,6 @@ extern hc_thread_mutex_t mux_display;
 #define OPTI_TYPE_SINGLE_HASH       (1 << 11)
 #define OPTI_TYPE_SINGLE_SALT       (1 << 12)
 #define OPTI_TYPE_BRUTE_FORCE       (1 << 13)
-#define OPTI_TYPE_SCALAR_MODE       (1 << 14)
 #define OPTI_TYPE_RAW_HASH          (1 << 15)
 
 #define OPTI_STR_ZERO_BYTE          "Zero-Byte"
@@ -1785,7 +1433,6 @@ extern hc_thread_mutex_t mux_display;
 #define OPTI_STR_SINGLE_HASH        "Single-Hash"
 #define OPTI_STR_SINGLE_SALT        "Single-Salt"
 #define OPTI_STR_BRUTE_FORCE        "Brute-Force"
-#define OPTI_STR_SCALAR_MODE        "Scalar-Mode"
 #define OPTI_STR_RAW_HASH           "Raw-Hash"
 
 /**
@@ -1883,15 +1530,16 @@ extern hc_thread_mutex_t mux_display;
  * status
  */
 
-#define STATUS_STARTING       0
-#define STATUS_INIT           1
-#define STATUS_RUNNING        2
-#define STATUS_PAUSED         3
-#define STATUS_EXHAUSTED      4
-#define STATUS_CRACKED        5
-#define STATUS_ABORTED        6
-#define STATUS_QUIT           7
-#define STATUS_BYPASS         8
+#define STATUS_STARTING           0
+#define STATUS_INIT               1
+#define STATUS_RUNNING            2
+#define STATUS_PAUSED             3
+#define STATUS_EXHAUSTED          4
+#define STATUS_CRACKED            5
+#define STATUS_ABORTED            6
+#define STATUS_QUIT               7
+#define STATUS_BYPASS             8
+#define STATUS_STOP_AT_CHECKPOINT 9
 
 #define ST_0000 "Initializing"
 #define ST_0001 "Starting"
@@ -1902,6 +1550,7 @@ extern hc_thread_mutex_t mux_display;
 #define ST_0006 "Aborted"
 #define ST_0007 "Quit"
 #define ST_0008 "Bypass"
+#define ST_0009 "Running (stop at checkpoint)"
 
 /**
  * kernel types
@@ -1916,6 +1565,7 @@ extern hc_thread_mutex_t mux_display;
 #define KERN_RUN_2           2000
 #define KERN_RUN_23          2500
 #define KERN_RUN_3           3000
+#define KERN_RUN_WEAK        9000
 
 /*
  * functions
@@ -1933,7 +1583,10 @@ void dump_hex (const char *s, size_t size);
 
 void truecrypt_crc32 (char *file, unsigned char keytab[64]);
 
+char *get_exec_path   ();
 char *get_install_dir (const char *progname);
+char *get_profile_dir (const char *homedir);
+char *get_session_dir (const char *profile_dir);
 
 uint get_vliw_by_compute_capability (const uint major, const uint minor);
 uint get_vliw_by_device_name (const char *device_name);
@@ -1942,7 +1595,7 @@ void *rulefind (const void *key, void *base, int nmemb, size_t size, int (*compa
 
 int sort_by_mtime       (const void *p1, const void *p2);
 int sort_by_cpu_rule    (const void *p1, const void *p2);
-int sort_by_gpu_rule    (const void *p1, const void *p2);
+int sort_by_kernel_rule    (const void *p1, const void *p2);
 int sort_by_stringptr   (const void *p1, const void *p2);
 int sort_by_dictstat    (const void *s1, const void *s2);
 int sort_by_bitmap      (const void *s1, const void *s2);
@@ -1982,7 +1635,7 @@ void handle_left_request (pot_t *pot, uint pot_cnt, char *input_buf, int input_l
 void handle_show_request_lm (pot_t *pot, uint pot_cnt, char *input_buf, int input_len, hash_t *hash_left, hash_t *hash_right, int (*sort_by_pot) (const void *, const void *), FILE *out_fp);
 void handle_left_request_lm (pot_t *pot, uint pot_cnt, char *input_buf, int input_len, hash_t *hash_left, hash_t *hash_right, int (*sort_by_pot) (const void *, const void *), FILE *out_fp);
 
-uint devices_to_devicemask (char *gpu_devices);
+uint devices_to_devicemask (char *opencl_devices);
 uint get_random_num (uint min, uint max);
 uint32_t mydivc32 (const uint32_t dividend, const uint32_t divisor);
 uint64_t mydivc64 (const uint64_t dividend, const uint64_t divisor);
@@ -2018,20 +1671,17 @@ void logfile_append (const char *fmt, ...);
 void fsync (int fd);
 #endif
 
-#ifdef _CUDA
-int hm_get_adapter_index (HM_ADAPTER nvGPUHandle[DEVICES_MAX]);
-#endif
+int hm_get_adapter_index_nv (HM_ADAPTER_NV nvGPUHandle[DEVICES_MAX]);
 
-#ifdef _OCL
-int get_adapters_num  (HM_LIB hm_dll, int *iNumberAdapters);
+int get_adapters_num_amd (HM_LIB hm_dll, int *iNumberAdapters);
 
-int hm_get_device_num (HM_LIB hm_dll, HM_ADAPTER hm_adapter_index, int *hm_device_num);
+int hm_get_device_num (HM_LIB hm_dll, HM_ADAPTER_AMD hm_adapter_index, int *hm_device_num);
 
 // void hm_get_opencl_busid_devid (hm_attrs_t *hm_device, uint opencl_num_devices, cl_device_id *devices);
 
-int hm_get_adapter_index (hm_attrs_t *hm_device, uint32_t *valid_adl_device_list, int num_adl_adapters, LPAdapterInfo lpAdapterInfo);
+int hm_get_adapter_index_amd (hm_attrs_t *hm_device, uint32_t *valid_adl_device_list, int num_adl_adapters, LPAdapterInfo lpAdapterInfo);
 
-LPAdapterInfo hm_get_adapter_info (HM_LIB hm_dll, int iNumberAdapters);
+LPAdapterInfo hm_get_adapter_info_amd (HM_LIB hm_dll, int iNumberAdapters);
 
 uint32_t *hm_get_list_valid_adl_adapters (int iNumberAdapters, int *num_adl_adapters, LPAdapterInfo lpAdapterInfo);
 
@@ -2041,19 +1691,18 @@ int hm_check_fanspeed_control (HM_LIB hm_dll, hm_attrs_t *hm_device, uint32_t *v
 void hm_close (HM_LIB hm_dll);
 
 HM_LIB hm_init ();
-#endif
 
 int hm_get_temperature_with_device_id (const uint device_id);
 int hm_get_fanspeed_with_device_id    (const uint device_id);
 int hm_get_utilization_with_device_id (const uint device_id);
 
-int hm_set_fanspeed_with_device_id (const uint device_id, const int fanspeed);
+int hm_set_fanspeed_with_device_id_amd (const uint device_id, const int fanspeed);
 
 void myabort ();
 void myquit ();
 
-uint set_gpu_accel (uint hash_mode);
-uint set_gpu_loops (uint hash_mode);
+uint set_kernel_accel (uint hash_mode);
+uint set_kernel_loops (uint hash_mode);
 void set_cpu_affinity (char *cpu_affinity);
 
 void eula_print (const char *progname);
@@ -2221,9 +1870,11 @@ int pbkdf2_sha512_parse_hash (char *input_buf, uint input_len, hash_t *hash_buf)
 int ecryptfs_parse_hash     (char *input_buf, uint input_len, hash_t *hash_buf);
 int bsdicrypt_parse_hash    (char *input_buf, uint input_len, hash_t *hash_buf);
 int rar3hp_parse_hash       (char *input_buf, uint input_len, hash_t *hash_buf);
+int rar5_parse_hash         (char *input_buf, uint input_len, hash_t *hash_buf);
 int cf10_parse_hash         (char *input_buf, uint input_len, hash_t *hash_buf);
 int mywallet_parse_hash     (char *input_buf, uint input_len, hash_t *hash_buf);
 int ms_drsr_parse_hash      (char *input_buf, uint input_len, hash_t *hash_buf);
+int androidfde_samsung_parse_hash (char *input_buf, uint input_len, hash_t *hash_buf);
 
 void load_kernel (const char *kernel_file, int num_devices, size_t *kernel_lengths, const unsigned char **kernel_sources);
 void writeProgramBin (char *dst, unsigned char *binary, size_t binary_size);
@@ -2234,6 +1885,7 @@ restore_data_t *init_restore  (int argc, char **argv);
 void            read_restore  (const char *eff_restore_file, restore_data_t *rd);
 void            write_restore (const char *new_restore_file, restore_data_t *rd);
 void            cycle_restore ();
+void            check_checkpoint ();
 
 #ifdef WIN
 
@@ -2290,10 +1942,10 @@ int mangle_title              (char arr[BLOCK_SIZE], int arr_len);
 int generate_random_rule (char rule_buf[RP_RULE_BUFSIZ], uint32_t rp_gen_func_min, uint32_t rp_gen_func_max);
 int _old_apply_rule (char *rule, int rule_len, char in[BLOCK_SIZE], int in_len, char out[BLOCK_SIZE]);
 
-int cpu_rule_to_gpu_rule (char rule_buf[BUFSIZ], uint rule_len, gpu_rule_t *rule);
-int gpu_rule_to_cpu_rule (char rule_buf[BUFSIZ], gpu_rule_t *rule);
+int cpu_rule_to_kernel_rule (char rule_buf[BUFSIZ], uint rule_len, kernel_rule_t *rule);
+int kernel_rule_to_cpu_rule (char rule_buf[BUFSIZ], kernel_rule_t *rule);
 
-void *thread_gpu_watch (void *p);
+void *thread_device_watch (void *p);
 void *thread_keypress  (void *p);
 void *thread_runtime   (void *p);
 
@@ -2302,6 +1954,7 @@ void *thread_runtime   (void *p);
  */
 
 #include "cpu-crc32.h"
+#include "cpu-md5.h"
 
 /**
  * ciphers for use on cpu

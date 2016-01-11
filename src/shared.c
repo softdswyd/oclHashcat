@@ -13,13 +13,8 @@
  * tuning tools
  */
 
-#ifdef _CUDA
-#define GET_ACCEL(x) GPU_ACCEL_NV_ ## x
-#define GET_LOOPS(x) GPU_LOOPS_NV_ ## x
-#elif _OCL
-#define GET_ACCEL(x) GPU_ACCEL_AMD_ ## x
-#define GET_LOOPS(x) GPU_LOOPS_AMD_ ## x
-#endif
+#define GET_ACCEL(x) KERNEL_ACCEL_ ## x
+#define GET_LOOPS(x) KERNEL_LOOPS_ ## x
 
 /**
  * bit rotate
@@ -2638,9 +2633,8 @@ void fsync (int fd)
  * thermal
  */
 
-#ifdef _CUDA
 #ifdef _WIN
-int hm_get_adapter_index (HM_ADAPTER nvGPUHandle[DEVICES_MAX])
+int hm_get_adapter_index_nv (HM_ADAPTER_NV nvGPUHandle[DEVICES_MAX])
 {
   NvU32 pGpuCount;
 
@@ -2658,18 +2652,17 @@ int hm_get_adapter_index (HM_ADAPTER nvGPUHandle[DEVICES_MAX])
 #endif
 
 #ifdef LINUX
-int hm_get_adapter_index (HM_ADAPTER nvGPUHandle[DEVICES_MAX])
+int hm_get_adapter_index_nv (HM_ADAPTER_NV nvGPUHandle[DEVICES_MAX])
 {
   int pGpuCount = 0;
 
   for (uint i = 0; i < DEVICES_MAX; i++)
   {
-    /* do not use wrapper function to omit warning message */
-    if (nvmlDeviceGetHandleByIndex (i, &nvGPUHandle[i]) != NVML_SUCCESS) break;
+    if (hc_NVML_nvmlDeviceGetHandleByIndex (data.hm_dll, 1, i, &nvGPUHandle[i]) != NVML_SUCCESS) break;
 
     //can be used to determine if the device by index matches the cuda device by index
     //char name[100]; memset (name, 0, sizeof (name));
-    //hc_NVML_nvmlDeviceGetName (nvGPUHandle[i], name, sizeof (name) - 1);
+    //hc_NVML_nvmlDeviceGetName (data.hm_dll, nvGPUHandle[i], name, sizeof (name) - 1);
 
     pGpuCount++;
   }
@@ -2684,10 +2677,7 @@ int hm_get_adapter_index (HM_ADAPTER nvGPUHandle[DEVICES_MAX])
   return (pGpuCount);
 }
 #endif
-#endif
 
-#ifdef _OCL
-#ifndef OSX
 void hm_close (HM_LIB hm_dll)
 {
   #ifdef _POSIX
@@ -2701,21 +2691,35 @@ void hm_close (HM_LIB hm_dll)
 
 HM_LIB hm_init ()
 {
-  #ifdef _POSIX
-  HM_LIB hm_dll = dlopen ("libatiadlxx.so", RTLD_LAZY | RTLD_GLOBAL);
+  HM_LIB hm_dll = NULL;
 
-  #elif _WIN
-  HM_LIB hm_dll = LoadLibrary ("atiadlxx.dll");
+  if (data.vendor_id == VENDOR_ID_AMD)
+  {
+    #ifdef _POSIX
+    hm_dll = dlopen ("libatiadlxx.so", RTLD_LAZY | RTLD_GLOBAL);
 
-  if (hm_dll == NULL)
+    #elif _WIN
+    hm_dll = LoadLibrary ("atiadlxx.dll");
+
+    if (hm_dll == NULL)
+    {
       hm_dll = LoadLibrary ("atiadlxy.dll");
+    }
 
+    #endif
+  }
+
+  #ifdef LINUX
+  if (data.vendor_id == VENDOR_ID_NV)
+  {
+    hm_dll = dlopen ("libnvidia-ml.so", RTLD_LAZY | RTLD_GLOBAL);
+  }
   #endif
 
   return hm_dll;
 }
 
-int get_adapters_num (HM_LIB hm_dll, int *iNumberAdapters)
+int get_adapters_num_amd (HM_LIB hm_dll, int *iNumberAdapters)
 {
   if (hc_ADL_Adapter_NumberOfAdapters_Get (hm_dll, iNumberAdapters) != ADL_OK) return -1;
 
@@ -2729,6 +2733,7 @@ int get_adapters_num (HM_LIB hm_dll, int *iNumberAdapters)
   return 0;
 }
 
+/*
 int hm_show_performance_level (HM_LIB hm_dll, int iAdapterIndex)
 {
   ADLODPerformanceLevels *lpOdPerformanceLevels = NULL;
@@ -2762,8 +2767,9 @@ int hm_show_performance_level (HM_LIB hm_dll, int iAdapterIndex)
 
   return 0;
 }
+*/
 
-LPAdapterInfo hm_get_adapter_info (HM_LIB hm_dll, int iNumberAdapters)
+LPAdapterInfo hm_get_adapter_info_amd (HM_LIB hm_dll, int iNumberAdapters)
 {
   size_t AdapterInfoSize = iNumberAdapters * sizeof (AdapterInfo);
 
@@ -2775,8 +2781,9 @@ LPAdapterInfo hm_get_adapter_info (HM_LIB hm_dll, int iNumberAdapters)
 }
 
 /*
- * does not help at all, since AMD does not assign different bus id, device id when we have multi GPU setups
- *
+//
+// does not help at all, since AMD does not assign different bus id, device id when we have multi GPU setups
+//
 
 int hm_get_opencl_device_index (hm_attrs_t *hm_device, uint num_adl_adapters, int bus_num, int dev_num)
 {
@@ -3027,7 +3034,7 @@ int hm_get_overdrive_version (HM_LIB hm_dll, hm_attrs_t *hm_device, uint32_t *va
   return 0;
 }
 
-int hm_get_adapter_index (hm_attrs_t *hm_device, uint32_t *valid_adl_device_list, int num_adl_adapters, LPAdapterInfo lpAdapterInfo)
+int hm_get_adapter_index_amd (hm_attrs_t *hm_device, uint32_t *valid_adl_device_list, int num_adl_adapters, LPAdapterInfo lpAdapterInfo)
 {
   for (int i = 0; i < num_adl_adapters; i++)
   {
@@ -3045,64 +3052,62 @@ int hm_get_adapter_index (hm_attrs_t *hm_device, uint32_t *valid_adl_device_list
 
     int opencl_device_index = i;
 
-    hm_device[opencl_device_index].adapter_index = info.iAdapterIndex;
+    hm_device[opencl_device_index].adapter_index.amd = info.iAdapterIndex;
   }
 
   return num_adl_adapters;
 }
-#endif
-#endif
 
 int hm_get_temperature_with_device_id (const uint device_id)
 {
-  #ifdef _OCL
-  #ifndef OSX
-  if (data.hm_dll)
+  if (data.vendor_id == VENDOR_ID_AMD)
   {
-    if (data.hm_device[device_id].od_version == 5)
+    if (data.hm_dll)
     {
-      ADLTemperature Temperature;
+      if (data.hm_device[device_id].od_version == 5)
+      {
+        ADLTemperature Temperature;
 
-      Temperature.iSize = sizeof (ADLTemperature);
+        Temperature.iSize = sizeof (ADLTemperature);
 
-      if (hc_ADL_Overdrive5_Temperature_Get (data.hm_dll, data.hm_device[device_id].adapter_index, 0, &Temperature) != ADL_OK) return -1;
+        if (hc_ADL_Overdrive5_Temperature_Get (data.hm_dll, data.hm_device[device_id].adapter_index.amd, 0, &Temperature) != ADL_OK) return -1;
 
-      return Temperature.iTemperature / 1000;
-    }
-    else if (data.hm_device[device_id].od_version == 6)
-    {
-      int Temperature = 0;
+        return Temperature.iTemperature / 1000;
+      }
+      else if (data.hm_device[device_id].od_version == 6)
+      {
+        int Temperature = 0;
 
-      if (hc_ADL_Overdrive6_Temperature_Get (data.hm_dll, data.hm_device[device_id].adapter_index, &Temperature) != ADL_OK) return -1;
+        if (hc_ADL_Overdrive6_Temperature_Get (data.hm_dll, data.hm_device[device_id].adapter_index.amd, &Temperature) != ADL_OK) return -1;
 
-      return Temperature / 1000;
+        return Temperature / 1000;
+      }
     }
   }
-  #endif
-  #endif
 
-  #ifdef _CUDA
-  #ifdef LINUX
-  int temperature = 0;
+  if (data.vendor_id == VENDOR_ID_NV)
+  {
+    #ifdef LINUX
+    int temperature = 0;
 
-  hc_NVML_nvmlDeviceGetTemperature (data.hm_device[device_id].adapter_index, NVML_TEMPERATURE_GPU, (unsigned int *) &temperature);
+    hc_NVML_nvmlDeviceGetTemperature (data.hm_dll, data.hm_device[device_id].adapter_index.nv, NVML_TEMPERATURE_GPU, (unsigned int *) &temperature);
 
-  return temperature;
-  #endif
+    return temperature;
+    #endif
 
-  #ifdef WIN
-  NV_GPU_THERMAL_SETTINGS pThermalSettings;
+    #ifdef WIN
+    NV_GPU_THERMAL_SETTINGS pThermalSettings;
 
-  pThermalSettings.version = NV_GPU_THERMAL_SETTINGS_VER;
-  pThermalSettings.count = NVAPI_MAX_THERMAL_SENSORS_PER_GPU;
-  pThermalSettings.sensor[0].controller = NVAPI_THERMAL_CONTROLLER_UNKNOWN;
-  pThermalSettings.sensor[0].target = NVAPI_THERMAL_TARGET_GPU;
+    pThermalSettings.version = NV_GPU_THERMAL_SETTINGS_VER;
+    pThermalSettings.count = NVAPI_MAX_THERMAL_SENSORS_PER_GPU;
+    pThermalSettings.sensor[0].controller = NVAPI_THERMAL_CONTROLLER_UNKNOWN;
+    pThermalSettings.sensor[0].target = NVAPI_THERMAL_TARGET_GPU;
 
-  if (hc_NvAPI_GPU_GetThermalSettings (data.hm_device[device_id].adapter_index, 0, &pThermalSettings) != NVAPI_OK) return -1;
+    if (hc_NvAPI_GPU_GetThermalSettings (data.hm_device[device_id].adapter_index.nv, 0, &pThermalSettings) != NVAPI_OK) return -1;
 
-  return pThermalSettings.sensor[0].currentTemp;
-  #endif
-  #endif
+    return pThermalSettings.sensor[0].currentTemp;
+    #endif
+  }
 
   return -1;
 }
@@ -3111,55 +3116,55 @@ int hm_get_fanspeed_with_device_id (const uint device_id)
 {
   if (data.hm_device[device_id].fan_supported == 1)
   {
-    #ifdef _OCL
-    #ifndef OSX
-    if (data.hm_dll)
+    if (data.vendor_id == VENDOR_ID_AMD)
     {
-      if (data.hm_device[device_id].od_version == 5)
+      if (data.hm_dll)
       {
-        ADLFanSpeedValue lpFanSpeedValue;
+        if (data.hm_device[device_id].od_version == 5)
+        {
+          ADLFanSpeedValue lpFanSpeedValue;
 
-        memset (&lpFanSpeedValue, 0, sizeof (lpFanSpeedValue));
+          memset (&lpFanSpeedValue, 0, sizeof (lpFanSpeedValue));
 
-        lpFanSpeedValue.iSize      = sizeof (lpFanSpeedValue);
-        lpFanSpeedValue.iSpeedType = ADL_DL_FANCTRL_SPEED_TYPE_PERCENT;
-        lpFanSpeedValue.iFlags     = ADL_DL_FANCTRL_FLAG_USER_DEFINED_SPEED;
+          lpFanSpeedValue.iSize      = sizeof (lpFanSpeedValue);
+          lpFanSpeedValue.iSpeedType = ADL_DL_FANCTRL_SPEED_TYPE_PERCENT;
+          lpFanSpeedValue.iFlags     = ADL_DL_FANCTRL_FLAG_USER_DEFINED_SPEED;
 
-        if (hc_ADL_Overdrive5_FanSpeed_Get (data.hm_dll, data.hm_device[device_id].adapter_index, 0, &lpFanSpeedValue) != ADL_OK) return -1;
+          if (hc_ADL_Overdrive5_FanSpeed_Get (data.hm_dll, data.hm_device[device_id].adapter_index.amd, 0, &lpFanSpeedValue) != ADL_OK) return -1;
 
-        return lpFanSpeedValue.iFanSpeed;
-      }
-      else // od_version == 6
-      {
-        ADLOD6FanSpeedInfo faninfo;
+          return lpFanSpeedValue.iFanSpeed;
+        }
+        else // od_version == 6
+        {
+          ADLOD6FanSpeedInfo faninfo;
 
-        memset (&faninfo, 0, sizeof (faninfo));
+          memset (&faninfo, 0, sizeof (faninfo));
 
-        if (hc_ADL_Overdrive6_FanSpeed_Get (data.hm_dll, data.hm_device[device_id].adapter_index, &faninfo) != ADL_OK) return -1;
+          if (hc_ADL_Overdrive6_FanSpeed_Get (data.hm_dll, data.hm_device[device_id].adapter_index.amd, &faninfo) != ADL_OK) return -1;
 
-        return faninfo.iFanSpeedPercent;
+          return faninfo.iFanSpeedPercent;
+        }
       }
     }
-    #endif
-    #endif
 
-    #ifdef _CUDA
-    #ifdef LINUX
-    int speed = 0;
+    if (data.vendor_id == VENDOR_ID_NV)
+    {
+      #ifdef LINUX
+      int speed = 0;
 
-    hc_NVML_nvmlDeviceGetFanSpeed (data.hm_device[device_id].adapter_index, (unsigned int *) &speed);
+      hc_NVML_nvmlDeviceGetFanSpeed (data.hm_dll, 1, data.hm_device[device_id].adapter_index.nv, (unsigned int *) &speed);
 
-    return speed;
-    #endif
+      return speed;
+      #endif
 
-    #ifdef WIN
-    NvU32 speed = 0;
+      #ifdef WIN
+      NvU32 speed = 0;
 
-    hc_NvAPI_GPU_GetTachReading (data.hm_device[device_id].adapter_index, &speed);
+      hc_NvAPI_GPU_GetTachReading (data.hm_device[device_id].adapter_index.nv, &speed);
 
-    return speed;
-    #endif
-    #endif
+      return speed;
+      #endif
+    }
   }
 
   return -1;
@@ -3167,47 +3172,45 @@ int hm_get_fanspeed_with_device_id (const uint device_id)
 
 int hm_get_utilization_with_device_id (const uint device_id)
 {
-  #ifdef _OCL
-  #ifndef OSX
-  if (data.hm_dll)
+  if (data.vendor_id == VENDOR_ID_AMD)
   {
-    ADLPMActivity PMActivity;
+    if (data.hm_dll)
+    {
+      ADLPMActivity PMActivity;
 
-    PMActivity.iSize = sizeof (ADLPMActivity);
+      PMActivity.iSize = sizeof (ADLPMActivity);
 
-    if (hc_ADL_Overdrive_CurrentActivity_Get (data.hm_dll, data.hm_device[device_id].adapter_index, &PMActivity) != ADL_OK) return -1;
+      if (hc_ADL_Overdrive_CurrentActivity_Get (data.hm_dll, data.hm_device[device_id].adapter_index.amd, &PMActivity) != ADL_OK) return -1;
 
-    return PMActivity.iActivityPercent;
+      return PMActivity.iActivityPercent;
+    }
   }
-  #endif
-  #endif
 
-  #ifdef _CUDA
-  #ifdef LINUX
-  nvmlUtilization_t utilization;
+  if (data.vendor_id == VENDOR_ID_NV)
+  {
+    #ifdef LINUX
+    nvmlUtilization_t utilization;
 
-  hc_NVML_nvmlDeviceGetUtilizationRates (data.hm_device[device_id].adapter_index, &utilization);
+    hc_NVML_nvmlDeviceGetUtilizationRates (data.hm_dll, data.hm_device[device_id].adapter_index.nv, &utilization);
 
-  return utilization.gpu;
-  #endif
+    return utilization.gpu;
+    #endif
 
-  #ifdef WIN
-  NV_GPU_DYNAMIC_PSTATES_INFO_EX pDynamicPstatesInfoEx;
+    #ifdef WIN
+    NV_GPU_DYNAMIC_PSTATES_INFO_EX pDynamicPstatesInfoEx;
 
-  pDynamicPstatesInfoEx.version = NV_GPU_DYNAMIC_PSTATES_INFO_EX_VER;
+    pDynamicPstatesInfoEx.version = NV_GPU_DYNAMIC_PSTATES_INFO_EX_VER;
 
-  if (hc_NvAPI_GPU_GetDynamicPstatesInfoEx (data.hm_device[device_id].adapter_index, &pDynamicPstatesInfoEx) != NVAPI_OK) return -1;
+    if (hc_NvAPI_GPU_GetDynamicPstatesInfoEx (data.hm_device[device_id].adapter_index.nv, &pDynamicPstatesInfoEx) != NVAPI_OK) return -1;
 
-  return pDynamicPstatesInfoEx.utilization[0].percentage;
-  #endif
-  #endif
+    return pDynamicPstatesInfoEx.utilization[0].percentage;
+    #endif
+  }
 
   return -1;
 }
 
-#ifdef _OCL
-#ifndef OSX
-int hm_set_fanspeed_with_device_id (const uint device_id, const int fanspeed)
+int hm_set_fanspeed_with_device_id_amd (const uint device_id, const int fanspeed)
 {
   if (data.hm_device[device_id].fan_supported == 1)
   {
@@ -3224,7 +3227,7 @@ int hm_set_fanspeed_with_device_id (const uint device_id, const int fanspeed)
         lpFanSpeedValue.iFlags     = ADL_DL_FANCTRL_FLAG_USER_DEFINED_SPEED;
         lpFanSpeedValue.iFanSpeed  = fanspeed;
 
-        if (hc_ADL_Overdrive5_FanSpeed_Set (data.hm_dll, data.hm_device[device_id].adapter_index, 0, &lpFanSpeedValue) != ADL_OK) return -1;
+        if (hc_ADL_Overdrive5_FanSpeed_Set (data.hm_dll, data.hm_device[device_id].adapter_index.amd, 0, &lpFanSpeedValue) != ADL_OK) return -1;
 
         return 0;
       }
@@ -3237,7 +3240,7 @@ int hm_set_fanspeed_with_device_id (const uint device_id, const int fanspeed)
         fan_speed_value.iSpeedType = ADL_OD6_FANSPEED_TYPE_PERCENT;
         fan_speed_value.iFanSpeed  = fanspeed;
 
-        if (hc_ADL_Overdrive6_FanSpeed_Set (data.hm_dll, data.hm_device[device_id].adapter_index, &fan_speed_value) != ADL_OK) return -1;
+        if (hc_ADL_Overdrive6_FanSpeed_Set (data.hm_dll, data.hm_device[device_id].adapter_index.amd, &fan_speed_value) != ADL_OK) return -1;
 
         return 0;
       }
@@ -3246,8 +3249,6 @@ int hm_set_fanspeed_with_device_id (const uint device_id, const int fanspeed)
 
   return -1;
 }
-#endif
-#endif
 
 /**
  * maskprocessor
@@ -3729,7 +3730,7 @@ int sp_comp_val (const void *p1, const void *p2)
   return b2->val - b1->val;
 }
 
-void sp_setup_tbl (const char *install_dir, char *hcstat, uint disable, uint classic, hcstat_table_t *root_table_buf, hcstat_table_t *markov_table_buf)
+void sp_setup_tbl (const char *shared_dir, char *hcstat, uint disable, uint classic, hcstat_table_t *root_table_buf, hcstat_table_t *markov_table_buf)
 {
   uint i;
   uint j;
@@ -3778,7 +3779,7 @@ void sp_setup_tbl (const char *install_dir, char *hcstat, uint disable, uint cla
 
     memset (hcstat_tmp, 0, sizeof (hcstat_tmp));
 
-    snprintf (hcstat_tmp, sizeof (hcstat_tmp) - 1, "%s/%s", install_dir, SP_HCSTAT);
+    snprintf (hcstat_tmp, sizeof (hcstat_tmp) - 1, "%s/%s", shared_dir, SP_HCSTAT);
 
     hcstat = hcstat_tmp;
   }
@@ -4071,6 +4072,33 @@ void usage_big_print (const char *progname)
   for (uint i = 0; USAGE_BIG[i] != NULL; i++) log_info (USAGE_BIG[i], progname);
 }
 
+char *get_exec_path ()
+{
+  int exec_path_len = 1024;
+
+  char *exec_path = (char *) mymalloc (exec_path_len);
+
+  #ifdef LINUX
+
+  char tmp[32];
+
+  sprintf (tmp, "/proc/%d/exe", getpid ());
+
+  const int len = readlink (tmp, exec_path, exec_path_len - 1);
+
+  #endif
+
+  #ifdef WIN
+
+  const int len = GetModuleFileName (NULL, exec_path, exec_path_len - 1);
+
+  #endif
+
+  exec_path[len] = 0;
+
+  return exec_path;
+}
+
 char *get_install_dir (const char *progname)
 {
   char *install_dir = mystrdup (progname);
@@ -4091,6 +4119,28 @@ char *get_install_dir (const char *progname)
   }
 
   return (install_dir);
+}
+
+char *get_profile_dir (const char *homedir)
+{
+  #define DOT_HASHCAT ".hashcat"
+
+  char *profile_dir = (char *) mymalloc (strlen (homedir) + 1 + strlen (DOT_HASHCAT) + 1);
+
+  sprintf (profile_dir, "%s/%s", homedir, DOT_HASHCAT);
+
+  return profile_dir;
+}
+
+char *get_session_dir (const char *profile_dir)
+{
+  #define SESSIONS_FOLDER "sessions"
+
+  char *session_dir = (char *) mymalloc (strlen (profile_dir) + 1 + strlen (SESSIONS_FOLDER) + 1);
+
+  sprintf (session_dir, "%s/%s", profile_dir, SESSIONS_FOLDER);
+
+  return session_dir;
 }
 
 void truecrypt_crc32 (char *file, unsigned char keytab[64])
@@ -4382,12 +4432,12 @@ int sort_by_cpu_rule (const void *p1, const void *p2)
   return memcmp (r1, r2, sizeof (cpu_rule_t));
 }
 
-int sort_by_gpu_rule (const void *p1, const void *p2)
+int sort_by_kernel_rule (const void *p1, const void *p2)
 {
-  const gpu_rule_t *r1 = (const gpu_rule_t *) p1;
-  const gpu_rule_t *r2 = (const gpu_rule_t *) p2;
+  const kernel_rule_t *r1 = (const kernel_rule_t *) p1;
+  const kernel_rule_t *r2 = (const kernel_rule_t *) p2;
 
-  return memcmp (r1, r2, sizeof (gpu_rule_t));
+  return memcmp (r1, r2, sizeof (kernel_rule_t));
 }
 
 int sort_by_stringptr (const void *p1, const void *p2)
@@ -5033,35 +5083,35 @@ void handle_left_request_lm (pot_t *pot, uint pot_cnt, char *input_buf, int inpu
   if (weak_hash_found == 1) myfree (pot_right_ptr);
 }
 
-uint devices_to_devicemask (char *gpu_devices)
+uint devices_to_devicemask (char *opencl_devices)
 {
-  uint gpu_devicemask = 0;
+  uint opencl_devicemask = 0;
 
-  if (gpu_devices)
+  if (opencl_devices)
   {
-    char *devices = strdup (gpu_devices);
+    char *devices = strdup (opencl_devices);
 
     char *next = strtok (devices, ",");
 
     do
     {
-      uint gpu_id = atoi (next);
+      uint device_id = atoi (next);
 
-      if (gpu_id < 1 || gpu_id > 8)
+      if (device_id < 1 || device_id > 8)
       {
-        log_error ("ERROR: invalid gpu_id %u specified", gpu_id);
+        log_error ("ERROR: invalid device_id %u specified", device_id);
 
         exit (-1);
       }
 
-      gpu_devicemask |= 1 << (gpu_id - 1);
+      opencl_devicemask |= 1 << (device_id - 1);
 
     } while ((next = strtok (NULL, ",")) != NULL);
 
     free (devices);
   }
 
-  return gpu_devicemask;
+  return opencl_devicemask;
 }
 
 uint get_random_num (uint min, uint max)
@@ -5348,7 +5398,6 @@ char *stroptitype (const uint opti_type)
     case OPTI_TYPE_SINGLE_HASH:       return ((char *) OPTI_STR_SINGLE_HASH);       break;
     case OPTI_TYPE_SINGLE_SALT:       return ((char *) OPTI_STR_SINGLE_SALT);       break;
     case OPTI_TYPE_BRUTE_FORCE:       return ((char *) OPTI_STR_BRUTE_FORCE);       break;
-    case OPTI_TYPE_SCALAR_MODE:       return ((char *) OPTI_STR_SCALAR_MODE);       break;
     case OPTI_TYPE_RAW_HASH:          return ((char *) OPTI_STR_RAW_HASH);          break;
   }
 
@@ -5561,6 +5610,8 @@ char *strhashtype (const uint hash_mode)
     case 12600: return ((char *) HT_12600); break;
     case 12700: return ((char *) HT_12700); break;
     case 12800: return ((char *) HT_12800); break;
+    case 12900: return ((char *) HT_12900); break;
+    case 13000: return ((char *) HT_13000); break;
   }
 
   return ((char *) "Unknown");
@@ -5570,14 +5621,16 @@ char *strstatus (const uint devices_status)
 {
   switch (devices_status)
   {
-    case  STATUS_INIT:      return ((char *) ST_0000); break;
-    case  STATUS_STARTING:  return ((char *) ST_0001); break;
-    case  STATUS_RUNNING:   return ((char *) ST_0002); break;
-    case  STATUS_PAUSED:    return ((char *) ST_0003); break;
-    case  STATUS_EXHAUSTED: return ((char *) ST_0004); break;
-    case  STATUS_CRACKED:   return ((char *) ST_0005); break;
-    case  STATUS_ABORTED:   return ((char *) ST_0006); break;
-    case  STATUS_QUIT:      return ((char *) ST_0007); break;
+    case  STATUS_INIT:               return ((char *) ST_0000); break;
+    case  STATUS_STARTING:           return ((char *) ST_0001); break;
+    case  STATUS_RUNNING:            return ((char *) ST_0002); break;
+    case  STATUS_PAUSED:             return ((char *) ST_0003); break;
+    case  STATUS_EXHAUSTED:          return ((char *) ST_0004); break;
+    case  STATUS_CRACKED:            return ((char *) ST_0005); break;
+    case  STATUS_ABORTED:            return ((char *) ST_0006); break;
+    case  STATUS_QUIT:               return ((char *) ST_0007); break;
+    case  STATUS_BYPASS:             return ((char *) ST_0008); break;
+    case  STATUS_STOP_AT_CHECKPOINT: return ((char *) ST_0009); break;
   }
 
   return ((char *) "Unknown");
@@ -7991,6 +8044,51 @@ void ascii_digest (char out_buf[4096], uint salt_pos, uint digest_pos)
       byte_swap_32 (digest_buf[7])
     );
   }
+  else if (hash_mode == 12900)
+  {
+    snprintf (out_buf, len-1, "%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x%08x",
+      salt.salt_buf[ 4],
+      salt.salt_buf[ 5],
+      salt.salt_buf[ 6],
+      salt.salt_buf[ 7],
+      salt.salt_buf[ 8],
+      salt.salt_buf[ 9],
+      salt.salt_buf[10],
+      salt.salt_buf[11],
+      byte_swap_32 (digest_buf[0]),
+      byte_swap_32 (digest_buf[1]),
+      byte_swap_32 (digest_buf[2]),
+      byte_swap_32 (digest_buf[3]),
+      byte_swap_32 (digest_buf[4]),
+      byte_swap_32 (digest_buf[5]),
+      byte_swap_32 (digest_buf[6]),
+      byte_swap_32 (digest_buf[7]),
+      salt.salt_buf[ 0],
+      salt.salt_buf[ 1],
+      salt.salt_buf[ 2],
+      salt.salt_buf[ 3]
+    );
+  }
+  else if (hash_mode == 13000)
+  {
+    rar5_t *rar5s = (rar5_t *) data.esalts_buf;
+
+    rar5_t *rar5 = &rar5s[salt_pos];
+
+    snprintf (out_buf, len-1, "$rar5$16$%08x%08x%08x%08x$%u$%08x%08x%08x%08x$8$%08x%08x",
+      salt.salt_buf[0],
+      salt.salt_buf[1],
+      salt.salt_buf[2],
+      salt.salt_buf[3],
+      salt.salt_sign[0],
+      rar5->iv[0],
+      rar5->iv[1],
+      rar5->iv[2],
+      rar5->iv[3],
+      byte_swap_32 (digest_buf[0]),
+      byte_swap_32 (digest_buf[1])
+    );
+  }
   else
   {
     if (hash_type == HASH_TYPE_MD4)
@@ -8360,6 +8458,46 @@ void bypass ()
   log_info ("Next dictionary / mask in queue selected, bypassing current one");
 }
 
+void stop_at_checkpoint ()
+{
+  if (data.devices_status != STATUS_STOP_AT_CHECKPOINT)
+  {
+    if (data.devices_status != STATUS_RUNNING) return;
+  }
+
+  // this feature only makes sense if --restore-disable was not specified
+
+  if (data.restore_disable == 1)
+  {
+    log_info ("WARNING: this feature is disabled when --restore-disable was specified");
+
+    return;
+  }
+
+  // check if monitoring of Restore Point updates should be enabled or disabled
+
+  if (data.devices_status != STATUS_STOP_AT_CHECKPOINT)
+  {
+    data.devices_status = STATUS_STOP_AT_CHECKPOINT;
+
+    // save the current restore point value
+
+    data.checkpoint_cur_words = get_lowest_words_done ();
+
+    log_info ("Checkpoint enabled: will quit at next Restore Point update");
+  }
+  else
+  {
+    data.devices_status = STATUS_RUNNING;
+
+    // reset the global value for checkpoint checks
+
+    data.checkpoint_cur_words = 0;
+
+    log_info ("Checkpoint disabled: Restore Point updates will no longer be monitored");
+  }
+}
+
 void myabort ()
 {
   if (data.devices_status == STATUS_INIT)     return;
@@ -8376,76 +8514,6 @@ void myquit ()
   data.devices_status = STATUS_QUIT;
 }
 
-#ifdef _OCL
-uint get_vliw_by_device_name (const char *device_name)
-{
-  uint vliw = 0;
-
-  if (strcmp  (device_name, "Capeverde"           ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Pitcairn"            ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Tahiti"              ) == 0) vliw = 1;
-  if (strcmp  (device_name, "ATI RV710"           ) == 0) vliw = 1;
-  if (strcmp  (device_name, "ATI RV730"           ) == 0) vliw = 1;
-  if (strcmp  (device_name, "ATI RV770"           ) == 0) vliw = 4;
-  if (strcmp  (device_name, "Cayman"              ) == 0) vliw = 4;
-  if (strcmp  (device_name, "Devastator"          ) == 0) vliw = 4;
-  if (strcmp  (device_name, "Scrapper"            ) == 0) vliw = 4;
-  if (strcmp  (device_name, "Barts"               ) == 0) vliw = 5;
-  if (strcmp  (device_name, "BeaverCreek"         ) == 0) vliw = 5;
-  if (strcmp  (device_name, "Caicos"              ) == 0) vliw = 5;
-  if (strcmp  (device_name, "Cedar"               ) == 0) vliw = 5;
-  if (strcmp  (device_name, "Cypress"             ) == 0) vliw = 5;
-  if (strcmp  (device_name, "Juniper"             ) == 0) vliw = 5;
-  if (strcmp  (device_name, "Loveland"            ) == 0) vliw = 5;
-  if (strcmp  (device_name, "Redwood"             ) == 0) vliw = 5;
-  if (strcmp  (device_name, "Turks"               ) == 0) vliw = 5;
-  if (strcmp  (device_name, "WinterPark"          ) == 0) vliw = 5;
-  if (strcmp  (device_name, "Oland"               ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Cats"                ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Raccoons"            ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Bonaire"             ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Hawaii"              ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Spectre"             ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Spooky"              ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Kalindi"             ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Hainan"              ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Iceland"             ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Tonga"               ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Mullins"             ) == 0) vliw = 1;
-  if (strcmp  (device_name, "Fiji"                ) == 0) vliw = 1;
-
-  if (strncmp (device_name, "ATI Radeon HD 4",  15) == 0) vliw = 1;
-  if (strncmp (device_name, "ATI Radeon HD 5",  15) == 0) vliw = 5;
-  if (strncmp (device_name, "ATI Radeon HD 6",  15) == 0) vliw = 4;
-  if (strncmp (device_name, "ATI Radeon HD 7",  15) == 0) vliw = 4;
-  if (strncmp (device_name, "ATI Radeon HD 79", 16) == 0) vliw = 1;
-  if (strncmp (device_name, "ATI Radeon HD 8",  15) == 0) vliw = 1;
-  if (strncmp (device_name, "AMD Radeon R9",    13) == 0) vliw = 1;
-
-  return vliw;
-}
-#else
-uint get_vliw_by_compute_capability (const uint major, const uint minor)
-{
-  uint vliw = 0;
-
-  if (major == 1 && minor == 0) vliw = 1;
-  if (major == 1 && minor == 1) vliw = 1;
-  if (major == 1 && minor == 2) vliw = 1;
-  if (major == 1 && minor == 3) vliw = 1;
-  if (major == 2 && minor == 0) vliw = 1;
-  if (major == 2 && minor == 1) vliw = 2;
-  if (major == 3 && minor == 0) vliw = 2;
-  if (major == 3 && minor == 5) vliw = 2;
-  if (major == 3 && minor == 7) vliw = 2;
-  if (major == 5 && minor == 0) vliw = 2;
-  if (major == 5 && minor == 2) vliw = 2;
-
-  return vliw;
-}
-#endif
-
-#ifdef _OCL
 void load_kernel (const char *kernel_file, int num_devices, size_t *kernel_lengths, const unsigned char **kernel_sources)
 {
   FILE *fp;
@@ -8499,7 +8567,6 @@ void writeProgramBin (char *dst, unsigned char *binary, size_t binary_size)
   fflush (fp);
   fclose (fp);
 }
-#endif
 
 /**
  * restore
@@ -8705,6 +8772,14 @@ uint64_t get_lowest_words_done ()
     if (words_done < words_cur) words_cur = words_done;
   }
 
+  // It's possible that a device's workload isn't finished right after a restore-case.
+  // In that case, this function would return 0 and overwrite the real restore point
+  // There's also data.words_cur which is set to rd->words_cur but it changes while
+  // the attack is running therefore we should stick to rd->words_cur.
+  // Note that -s influences rd->words_cur we should keep a close look on that.
+
+  if (words_cur < data.rd->words_cur) words_cur = data.rd->words_cur;
+
   return words_cur;
 }
 
@@ -8772,11 +8847,23 @@ void cycle_restore ()
   }
 }
 
+void check_checkpoint ()
+{
+  // if (data.restore_disable == 1) break;  (this is already implied by previous checks)
+
+  uint64_t words_cur = get_lowest_words_done ();
+
+  if (words_cur != data.checkpoint_cur_words)
+  {
+    myabort ();
+  }
+}
+
 /**
  * adjustments
  */
 
-uint set_gpu_accel (uint hash_mode)
+uint set_kernel_accel (uint hash_mode)
 {
   switch (hash_mode)
   {
@@ -8956,12 +9043,14 @@ uint set_gpu_accel (uint hash_mode)
     case 12600: return GET_ACCEL (12600);
     case 12700: return GET_ACCEL (12700);
     case 12800: return GET_ACCEL (12800);
+    case 12900: return GET_ACCEL (12900);
+    case 13000: return GET_ACCEL (13000);
   }
 
   return 0;
 }
 
-uint set_gpu_loops (uint hash_mode)
+uint set_kernel_loops (uint hash_mode)
 {
   switch (hash_mode)
   {
@@ -9141,6 +9230,8 @@ uint set_gpu_loops (uint hash_mode)
     case 12600: return GET_LOOPS (12600);
     case 12700: return GET_LOOPS (12700);
     case 12800: return GET_LOOPS (12800);
+    case 12900: return GET_LOOPS (12900);
+    case 13000: return GET_LOOPS (13000);
   }
 
   return 0;
@@ -9611,7 +9702,8 @@ int netscreen_parse_hash (char *input_buf, uint input_len, hash_t *hash_buf)
 
   salt_len = parse_and_store_salt (salt_buf_ptr, salt_buf, salt_len);
 
-  if (salt_len == UINT_MAX) return (PARSER_SALT_LENGTH);
+  // max. salt length: salt_buf[32] => 32 - 22 (":Administration Tools:") = 10
+  if (salt_len > 10) return (PARSER_SALT_LENGTH);
 
   salt->salt_len = salt_len;
 
@@ -13284,6 +13376,10 @@ int sapg_parse_hash (char *input_buf, uint input_len, hash_t *hash_buf)
   }
 
   // SAP user names cannot be longer than 12 characters
+  // this is kinda buggy. if the username is in utf the length can be up to length 12*3
+  // so far nobody complained so we stay with this because it helps in optimization
+  // final string can have a max size of 32 (password) + (10 * 5) = lengthMagicArray + 12 (max salt) + 1 (the 0x80)
+
   if (user_len > 12) return (PARSER_SALT_LENGTH);
 
   // SAP user name cannot start with ! or ?
@@ -18292,6 +18388,118 @@ int rar3hp_parse_hash (char *input_buf, uint input_len, hash_t *hash_buf)
   return (PARSER_OK);
 }
 
+int rar5_parse_hash (char *input_buf, uint input_len, hash_t *hash_buf)
+{
+  if ((input_len < DISPLAY_LEN_MIN_13000) || (input_len > DISPLAY_LEN_MAX_13000)) return (PARSER_GLOBAL_LENGTH);
+
+  if (memcmp (SIGNATURE_RAR5, input_buf, 1 + 4 + 1)) return (PARSER_SIGNATURE_UNMATCHED);
+
+  uint32_t *digest = (uint32_t *) hash_buf->digest;
+
+  salt_t *salt = hash_buf->salt;
+
+  rar5_t *rar5 = (rar5_t *) hash_buf->esalt;
+
+  /**
+   * parse line
+   */
+
+  char *param0_pos = input_buf + 1 + 4 + 1;
+
+  char *param1_pos = strchr (param0_pos, '$');
+
+  if (param1_pos == NULL) return (PARSER_SEPARATOR_UNMATCHED);
+
+  uint32_t param0_len = param1_pos - param0_pos;
+
+  param1_pos++;
+
+  char *param2_pos = strchr (param1_pos, '$');
+
+  if (param2_pos == NULL) return (PARSER_SEPARATOR_UNMATCHED);
+
+  uint32_t param1_len = param2_pos - param1_pos;
+
+  param2_pos++;
+
+  char *param3_pos = strchr (param2_pos, '$');
+
+  if (param3_pos == NULL) return (PARSER_SEPARATOR_UNMATCHED);
+
+  uint32_t param2_len = param3_pos - param2_pos;
+
+  param3_pos++;
+
+  char *param4_pos = strchr (param3_pos, '$');
+
+  if (param4_pos == NULL) return (PARSER_SEPARATOR_UNMATCHED);
+
+  uint32_t param3_len = param4_pos - param3_pos;
+
+  param4_pos++;
+
+  char *param5_pos = strchr (param4_pos, '$');
+
+  if (param5_pos == NULL) return (PARSER_SEPARATOR_UNMATCHED);
+
+  uint32_t param4_len = param5_pos - param4_pos;
+
+  param5_pos++;
+
+  uint32_t param5_len = input_len - 1 - 4 - 1 - param0_len - 1 - param1_len - 1 - param2_len - 1 - param3_len - 1 - param4_len - 1;
+
+  char *salt_buf = param1_pos;
+  char *iv       = param3_pos;
+  char *pswcheck = param5_pos;
+
+  const uint salt_len     = atoi (param0_pos);
+  const uint iterations   = atoi (param2_pos);
+  const uint pswcheck_len = atoi (param4_pos);
+
+  /**
+   * verify some data
+   */
+
+  if (param1_len   != 32) return (PARSER_SALT_VALUE);
+  if (param3_len   != 32) return (PARSER_SALT_VALUE);
+  if (param5_len   != 16) return (PARSER_SALT_VALUE);
+
+  if (salt_len     != 16) return (PARSER_SALT_VALUE);
+  if (iterations   ==  0) return (PARSER_SALT_VALUE);
+  if (pswcheck_len !=  8) return (PARSER_SALT_VALUE);
+
+  /**
+   * store data
+   */
+
+  salt->salt_buf[0] = hex_to_uint (&salt_buf[ 0]);
+  salt->salt_buf[1] = hex_to_uint (&salt_buf[ 8]);
+  salt->salt_buf[2] = hex_to_uint (&salt_buf[16]);
+  salt->salt_buf[3] = hex_to_uint (&salt_buf[24]);
+
+  rar5->iv[0] = hex_to_uint (&iv[ 0]);
+  rar5->iv[1] = hex_to_uint (&iv[ 8]);
+  rar5->iv[2] = hex_to_uint (&iv[16]);
+  rar5->iv[3] = hex_to_uint (&iv[24]);
+
+  salt->salt_len = 16;
+
+  salt->salt_sign[0] = iterations;
+
+  salt->salt_iter = ((1 << iterations) + 32) - 1;
+
+  /**
+   * digest buf
+   */
+
+  digest[0] = hex_to_uint (&pswcheck[ 0]);
+  digest[1] = hex_to_uint (&pswcheck[ 8]);
+  digest[2] = 0;
+  digest[3] = 0;
+
+  return (PARSER_OK);
+}
+
 int cf10_parse_hash (char *input_buf, uint input_len, hash_t *hash_buf)
 {
   if ((input_len < DISPLAY_LEN_MIN_12600) || (input_len > DISPLAY_LEN_MAX_12600)) return (PARSER_GLOBAL_LENGTH);
@@ -18525,6 +18733,61 @@ int ms_drsr_parse_hash (char *input_buf, uint input_len, hash_t *hash_buf)
   return (PARSER_OK);
 }
 
+int androidfde_samsung_parse_hash (char *input_buf, uint input_len, hash_t *hash_buf)
+{
+  if ((input_len < DISPLAY_LEN_MIN_12900) || (input_len > DISPLAY_LEN_MAX_12900)) return (PARSER_GLOBAL_LENGTH);
+
+  uint32_t *digest = (uint32_t *) hash_buf->digest;
+
+  salt_t *salt = hash_buf->salt;
+
+  /**
+   * parse line
+   */
+
+  char *hash_pos  = input_buf + 64;
+  char *salt1_pos = input_buf + 128;
+  char *salt2_pos = input_buf;
+
+  /**
+   * salt
+   */
+
+  salt->salt_buf[ 0] = hex_to_uint (&salt1_pos[ 0]);
+  salt->salt_buf[ 1] = hex_to_uint (&salt1_pos[ 8]);
+  salt->salt_buf[ 2] = hex_to_uint (&salt1_pos[16]);
+  salt->salt_buf[ 3] = hex_to_uint (&salt1_pos[24]);
+
+  salt->salt_buf[ 4] = hex_to_uint (&salt2_pos[ 0]);
+  salt->salt_buf[ 5] = hex_to_uint (&salt2_pos[ 8]);
+  salt->salt_buf[ 6] = hex_to_uint (&salt2_pos[16]);
+  salt->salt_buf[ 7] = hex_to_uint (&salt2_pos[24]);
+
+  salt->salt_buf[ 8] = hex_to_uint (&salt2_pos[32]);
+  salt->salt_buf[ 9] = hex_to_uint (&salt2_pos[40]);
+  salt->salt_buf[10] = hex_to_uint (&salt2_pos[48]);
+  salt->salt_buf[11] = hex_to_uint (&salt2_pos[56]);
+
+  salt->salt_len = 48;
+
+  salt->salt_iter = ROUNDS_ANDROIDFDE_SAMSUNG - 1;
+
+  /**
+   * digest buf
+   */
+
+  digest[0] = hex_to_uint (&hash_pos[ 0]);
+  digest[1] = hex_to_uint (&hash_pos[ 8]);
+  digest[2] = hex_to_uint (&hash_pos[16]);
+  digest[3] = hex_to_uint (&hash_pos[24]);
+  digest[4] = hex_to_uint (&hash_pos[32]);
+  digest[5] = hex_to_uint (&hash_pos[40]);
+  digest[6] = hex_to_uint (&hash_pos[48]);
+  digest[7] = hex_to_uint (&hash_pos[56]);
+
+  return (PARSER_OK);
+}
+
 /**
  * parallel running threads
  */
@@ -18713,6 +18976,21 @@ void *thread_keypress (void *p)
 
         break;
 
+      case 'c':
+
+        log_info ("");
+
+        if (benchmark == 1) break;
+
+        stop_at_checkpoint ();
+
+        log_info ("");
+
+        if (quiet == 0) fprintf (stdout, "%s", PROMPT);
+        if (quiet == 0) fflush (stdout);
+
+        break;
+
       case 'q':
 
         log_info ("");
@@ -18790,14 +19068,14 @@ char conv_itoc (char c)
 }
 
 /**
- * GPU rules
+ * device rules
  */
 
 #define INCR_POS           if (++rule_pos == rule_len) return (-1)
 #define SET_NAME(rule,val) (rule)->cmds[rule_cnt]  = ((val) & 0xff) <<  0
 #define SET_P0(rule,val)   INCR_POS; (rule)->cmds[rule_cnt] |= ((val) & 0xff) <<  8
 #define SET_P1(rule,val)   INCR_POS; (rule)->cmds[rule_cnt] |= ((val) & 0xff) << 16
-#define MAX_GPU_RULES      14
+#define MAX_KERNEL_RULES   255
 #define GET_NAME(rule)     rule_cmd = (((rule)->cmds[rule_cnt] >>  0) & 0xff)
 #define GET_P0(rule)       INCR_POS; rule_buf[rule_pos] = (((rule)->cmds[rule_cnt] >>  8) & 0xff)
 #define GET_P1(rule)       INCR_POS; rule_buf[rule_pos] = (((rule)->cmds[rule_cnt] >> 16) & 0xff)
@@ -18807,12 +19085,12 @@ char conv_itoc (char c)
 #define GET_P0_CONV(rule)      INCR_POS; rule_buf[rule_pos] = conv_itoc (((rule)->cmds[rule_cnt] >>  8) & 0xff)
 #define GET_P1_CONV(rule)      INCR_POS; rule_buf[rule_pos] = conv_itoc (((rule)->cmds[rule_cnt] >> 16) & 0xff)
 
-int cpu_rule_to_gpu_rule (char rule_buf[BUFSIZ], uint rule_len, gpu_rule_t *rule)
+int cpu_rule_to_kernel_rule (char rule_buf[BUFSIZ], uint rule_len, kernel_rule_t *rule)
 {
   uint rule_pos;
   uint rule_cnt;
 
-  for (rule_pos = 0, rule_cnt = 0; rule_pos < rule_len && rule_cnt < MAX_GPU_RULES; rule_pos++, rule_cnt++)
+  for (rule_pos = 0, rule_cnt = 0; rule_pos < rule_len && rule_cnt < MAX_KERNEL_RULES; rule_pos++, rule_cnt++)
   {
     switch (rule_buf[rule_pos])
     {
@@ -19023,7 +19301,7 @@ int cpu_rule_to_gpu_rule (char rule_buf[BUFSIZ], uint rule_len, gpu_rule_t *rule
   return (0);
 }
 
-int gpu_rule_to_cpu_rule (char rule_buf[BUFSIZ], gpu_rule_t *rule)
+int kernel_rule_to_cpu_rule (char rule_buf[BUFSIZ], kernel_rule_t *rule)
 {
   uint rule_cnt;
   uint rule_pos;
@@ -19031,7 +19309,7 @@ int gpu_rule_to_cpu_rule (char rule_buf[BUFSIZ], gpu_rule_t *rule)
 
   char rule_cmd;
 
-  for (rule_cnt = 0, rule_pos = 0; rule_pos < rule_len && rule_cnt < MAX_GPU_RULES; rule_pos++, rule_cnt++)
+  for (rule_cnt = 0, rule_pos = 0; rule_pos < rule_len && rule_cnt < MAX_KERNEL_RULES; rule_pos++, rule_cnt++)
   {
     GET_NAME (rule);
 

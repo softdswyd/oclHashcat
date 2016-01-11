@@ -1,8 +1,8 @@
-oclHashcat v2.00
+oclHashcat v2.10
 ================
 
-NV users require ForceWare 346.59 or later
-AMD users require Catalyst 14.9 or later
+NV users require ForceWare 346.59 or later (recommended 358.09 or later)
+AMD users require Catalyst 14.9 or later (recommended 15.9 or later)
 
 ##
 ## Features
@@ -15,7 +15,7 @@ AMD users require Catalyst 14.9 or later
 - Multi-GPU (up to 128 GPUs)
 - Multi-Hash (up to 100 million hashes at once)
 - Multi-OS (Linux & Windows native binaries)
-- Multi-Platform (OpenCL & CUDA support)
+- Multi-Platform (OpenCL support)
 - Multi-Algorithm (see below)
 - Low resource utilization; you can still watch movies or play games while cracking
 - Focuses on highly iterated modern hashes
@@ -183,6 +183,7 @@ AMD users require Catalyst 14.9 or later
 - Skype
 - 7-Zip
 - RAR3-hp
+- RAR5
 - PDF 1.1 - 1.3 (Acrobat 2 - 4)
 - PDF 1.4 - 1.6 (Acrobat 5 - 8)
 - PDF 1.7 Level 3 (Acrobat 9)
@@ -204,6 +205,7 @@ AMD users require Catalyst 14.9 or later
 - Password Safe v3
 - eCryptfs
 - Android FDE <= 4.3
+- Android FDE (Samsung DEK)
 - TrueCrypt 5.0+
 
 ##

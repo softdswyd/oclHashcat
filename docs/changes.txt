@@ -1,4 +1,76 @@
-* changes v2.01 -> not-known-yet:
+* changes v2.01 -> v2.10:
+
+Type.: Feature
+File.: Kernel
+Desc.: Dropped CUDA support and switched to OpenCL for NVidia
+
+Type.: Feature
+File.: Kernel
+Desc.: Extended support from 14 to 255 functions calls per rule on GPU
+
+Type.: Feature
+File.: Kernel
+Desc.: Added new hash mode -m 12900 = Android FDE (Samsung DEK)
+Issue: 86
+
+Type.: Feature
+File.: Kernel
+Desc.: Added new hash mode -m 13000 = RAR5
+Issue: 68
+
+Type.: Feature
+File.: Host
+Desc.: Added a Makefile target for native compilation
+Issue: 2
+
+Type.: Feature
+File.: Host
+Desc.: Switched to Khronos OSS OpenCL reference implementation for building
+Issue: 2
+
+Type.: Feature
+File.: Host
+Desc.: No longer need NVidia-CUDA-SDK, AMD-APP-SDK and NVidia-ForceWare driver in depencies
+Issue: 2
+
+Type.: Feature
+File.: Host
+Desc.: Added option --opencl-platform to select a single OpenCL platform in case multiple OpenCL platforms are present 
+Issue: 2
+
+Type.: Feature
+File.: Host
+Desc.: Implemented a new feature that allows to quit at next restore point update (and disable it)
+Issue: 10
+
+Type.: Feature
+File.: Host
+Desc.: Moved rules_optimize to hashcat-utils
+Issue: 2
+
+Type.: Change
+File.: Host
+Desc.: Renamed option --gpu-devices to --opencl-devices
+Issue: 2
+
+Type.: Change
+File.: Host
+Desc.: Renamed option --gpu-accel to --kernel-accel
+Issue: 2
+
+Type.: Change
+File.: Host
+Desc.: Renamed option --gpu-loops to --kernel-loops
+Issue: 2
+
+Type.: Bug
+File.: Host
+Desc.: Fixed a bug in combination of --restore and a user immediately aborting the session after restart
+Trac.: 684
+
+Type.: Bug
+File.: Kernel
+Desc.: Fix a bug in the implementation of GOST R 34.11-94, zero length passwords were not cracked
 
 * changes v2.00 -> v2.01:
 

@@ -1,11 +1,11 @@
 #!/bin/bash
-# Programmable bash completion for oclHashcat / cudaHashcat
+# Programmable bash completion for oclHashcat
 # this script was tested under ubuntu, please verify if on your
 # distro /etc/bash_completion.d/ exists (otherwise it won't work)
 
 COMPGENSCRIPT=/etc/bash_completion
 COMPGENFOLDER=${COMPGENSCRIPT}.d
-COMPGENTARGET=${COMPGENFOLDER}/oclHashcat64.sh
+COMPGENTARGET=${COMPGENFOLDER}/oclHashcat.sh
 BASHRC=~/.bashrc
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -94,7 +94,9 @@ is_child=0
 
 if ! is_root; then
 
-   sudo ${BASH_SOURCE[0]} ${was_sourced}
+  echo "Warning: root permissions are required to install the tab completion script into the protected '${COMPGENFOLDER}' folder"
+
+  sudo ${BASH_SOURCE[0]} ${was_sourced}
 
   ret=${?}
 
@@ -129,9 +131,13 @@ fi
 
 if [ -d "${COMPGENFOLDER}" ]; then
 
+  # remove the old version of oclHashcat64.sh (was renamed to just oclHashcat.sh)
+
+  rm -f "${COMPGENTARGET}"/oclHashcat64.sh
+
   # copy the script to target folder
 
-  cp ${ROOT}/oclHashcat64.sh "${COMPGENTARGET}"
+  cp ${ROOT}/oclHashcat.sh "${COMPGENTARGET}"
 
   # adjust paths to the main binaries of oclHashcat
 
