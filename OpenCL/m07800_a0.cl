@@ -1,67 +1,58 @@
 /**
- * Author......: Jens Steube <jens.steube@gmail.com>
+ * Author......: See docs/credits.txt
  * License.....: MIT
  */
 
 #define _SAPG_
 
-#include "include/constants.h"
-#include "include/kernel_vendor.h"
+//incompatible data-dependant code
+//#define NEW_SIMD_CODE
 
-#define DGST_R0 3
-#define DGST_R1 4
-#define DGST_R2 2
-#define DGST_R3 1
-
-#include "include/kernel_functions.c"
-#include "OpenCL/types_ocl.c"
-#include "OpenCL/common.c"
-#include "include/rp_kernel.h"
-#include "OpenCL/rp.c"
-
-#define COMPARE_S "OpenCL/check_single_comp4.c"
-#define COMPARE_M "OpenCL/check_multi_comp4.c"
-
-#define GETSHIFTEDINT(a,n) amd_bytealign ((a)[((n)/4)+1], (a)[((n)/4)+0], (n))
-
-#define SETSHIFTEDINT(a,n,v)        \
-{                                   \
-  const u32 s = ((n) & 3) * 8;     \
-  const u64 x = (u64) (v) << s; \
-  (a)[((n)/4)+0] |= x;              \
-  (a)[((n)/4)+1]  = x >> 32;        \
-}
+#include "inc_vendor.cl"
+#include "inc_hash_constants.h"
+#include "inc_hash_functions.cl"
+#include "inc_types.cl"
+#include "inc_common.cl"
+#include "inc_rp.h"
+#include "inc_rp.cl"
+#include "inc_simd.cl"
 
 __constant u32 theMagicArray[64] =
 {
-  0x1451ac91,0x4354679f,0xe03be724,0xc27b7428,0xeb133386,0x5ccb4f5a,0x37730a08,0x2f1c5d0e,
-  0xe5e68f33,0xddae9bf8,0x8d4bf216,0xdcd4e12c,0x9ddfcbb0,0x176d70d4,0x3f424df9,0x94111b9b,
-  0x9bc15b9f,0x039d0506,0x8a135e9d,0xe86a9a1e,0x17147cd9,0xf62ac758,0x0a6399a1,0xc370fdd7,
-  0x13745ef6,0x040bc903,0x26f79826,0x2593928a,0x230da2b0,0x6d7963ed,0x3cfa3213,0xa39a0235,
-  0x0a8eddb3,0xc351bf24,0x9f55cd7c,0x4c94af37,0x82520829,0x374e3bb2,0x9107179f,0xcdfd3b11,
-  0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0
+  0x91ac5114, 0x9f675443, 0x24e73be0, 0x28747bc2, 0x863313eb, 0x5a4fcb5c, 0x080a7337, 0x0e5d1c2f,
+  0x338fe6e5, 0xf89baedd, 0x16f24b8d, 0x2ce1d4dc, 0xb0cbdf9d, 0xd4706d17, 0xf94d423f, 0x9b1b1194,
+  0x9f5bc19b, 0x06059d03, 0x9d5e138a, 0x1e9a6ae8, 0xd97c1417, 0x58c72af6, 0xa199630a, 0xd7fd70c3,
+  0xf65e7413, 0x03c90b04, 0x2698f726, 0x8a929325, 0xb0a20d23, 0xed63796d, 0x1332fa3c, 0x35029aa3,
+  0xb3dd8e0a, 0x24bf51c3, 0x7ccd559f, 0x37af944c, 0x29085282, 0xb23b4e37, 0x9f170791, 0x113bfdcd,
+  0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+  0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+  0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
 };
 
-static void swap_buffer (u32 final[16])
+static u32 GETSHIFTEDINT_CONST (__constant u32 *a, const int n)
 {
-  final[ 0] = swap32 (final[ 0]);
-  final[ 1] = swap32 (final[ 1]);
-  final[ 2] = swap32 (final[ 2]);
-  final[ 3] = swap32 (final[ 3]);
-  final[ 4] = swap32 (final[ 4]);
-  final[ 5] = swap32 (final[ 5]);
-  final[ 6] = swap32 (final[ 6]);
-  final[ 7] = swap32 (final[ 7]);
-  final[ 8] = swap32 (final[ 8]);
-  final[ 9] = swap32 (final[ 9]);
-  final[10] = swap32 (final[10]);
-  final[11] = swap32 (final[11]);
-  final[12] = swap32 (final[12]);
-  final[13] = swap32 (final[13]);
-  final[14] = swap32 (final[14]);
-  final[15] = swap32 (final[15]);
+  const int d = n / 4;
+  const int m = n & 3;
+
+  u64 tmp = hl32_to_64_S (a[d + 0], a[d + 1]);
+
+  tmp <<= m * 8;
+
+  return h32_from_64_S (tmp);
+}
+
+
+static void SETSHIFTEDINT (u32 *a, const int n, const u32 v)
+{
+  const int d = n / 4;
+  const int m = n & 3;
+
+  u64 tmp = hl32_to_64_S (v, 0);
+
+  tmp >>= m * 8;
+
+  a[d + 0] |= h32_from_64_S (tmp);
+  a[d + 1]  = l32_from_64_S (tmp);
 }
 
 static void sha1_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[5])
@@ -192,7 +183,7 @@ static void sha1_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], c
   digest[4] += E;
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_m04 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m07800_m04 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * modifier
@@ -209,18 +200,16 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_m04 (__glo
   if (gid >= gid_max) return;
 
   u32 pw_buf0[4];
-
-  pw_buf0[0] = pws[gid].i[ 0];
-  pw_buf0[1] = pws[gid].i[ 1];
-  pw_buf0[2] = pws[gid].i[ 2];
-  pw_buf0[3] = pws[gid].i[ 3];
-
   u32 pw_buf1[4];
 
-  pw_buf1[0] = pws[gid].i[ 4];
-  pw_buf1[1] = pws[gid].i[ 5];
-  pw_buf1[2] = pws[gid].i[ 6];
-  pw_buf1[3] = pws[gid].i[ 7];
+  pw_buf0[0] = pws[gid].i[0];
+  pw_buf0[1] = pws[gid].i[1];
+  pw_buf0[2] = pws[gid].i[2];
+  pw_buf0[3] = pws[gid].i[3];
+  pw_buf1[0] = pws[gid].i[4];
+  pw_buf1[1] = pws[gid].i[5];
+  pw_buf1[2] = pws[gid].i[6];
+  pw_buf1[3] = pws[gid].i[7];
 
   const u32 pw_len = pws[gid].pw_len;
 
@@ -245,73 +234,44 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_m04 (__glo
    * loop
    */
 
-  for (u32 il_pos = 0; il_pos < rules_cnt; il_pos++)
+  for (u32 il_pos = 0; il_pos < il_cnt; il_pos += VECT_SIZE)
   {
-    u32 w0[4];
+    u32x w0[4] = { 0 };
+    u32x w1[4] = { 0 };
+    u32x w2[4] = { 0 };
+    u32x w3[4] = { 0 };
 
-    w0[0] = pw_buf0[0];
-    w0[1] = pw_buf0[1];
-    w0[2] = pw_buf0[2];
-    w0[3] = pw_buf0[3];
-
-    u32 w1[4];
-
-    w1[0] = pw_buf1[0];
-    w1[1] = pw_buf1[1];
-    w1[2] = pw_buf1[2];
-    w1[3] = pw_buf1[3];
-
-    u32 w2[4];
-
-    w2[0] = 0;
-    w2[1] = 0;
-    w2[2] = 0;
-    w2[3] = 0;
-
-    u32 w3[4];
-
-    w3[0] = 0;
-    w3[1] = 0;
-    w3[2] = 0;
-    w3[3] = 0;
-
-    const u32 out_len = apply_rules (rules_buf[il_pos].cmds, w0, w1, pw_len);
+    const u32x out_len = apply_rules_vect (pw_buf0, pw_buf1, pw_len, rules_buf, il_pos, w0, w1);
 
     /**
-     * append salt
+     * SAP
      */
 
     u32 s0[4];
+    u32 s1[4];
+    u32 s2[4];
+    u32 s3[4];
 
     s0[0] = salt_buf[0];
     s0[1] = salt_buf[1];
     s0[2] = salt_buf[2];
     s0[3] = salt_buf[3];
-
-    u32 s1[4];
-
     s1[0] = salt_buf[4];
     s1[1] = salt_buf[5];
     s1[2] = salt_buf[6];
     s1[3] = salt_buf[7];
-
-    u32 s2[4];
-
     s2[0] = 0;
     s2[1] = 0;
     s2[2] = 0;
     s2[3] = 0;
-
-    u32 s3[4];
-
     s3[0] = 0;
     s3[1] = 0;
     s3[2] = 0;
     s3[3] = 0;
 
-    switch_buffer_by_offset (s0, s1, s2, s3, out_len);
+    switch_buffer_by_offset_le_VV (s0, s1, s2, s3, out_len);
 
-    const u32 pw_salt_len = out_len + salt_len;
+    const u32x pw_salt_len = out_len + salt_len;
 
     /**
      * sha1
@@ -335,6 +295,22 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_m04 (__glo
     final[13] = swap32 (w3[1] | s3[1]);
     final[14] = 0;
     final[15] = pw_salt_len * 8;
+    final[16] = 0;
+    final[17] = 0;
+    final[18] = 0;
+    final[19] = 0;
+    final[20] = 0;
+    final[21] = 0;
+    final[22] = 0;
+    final[23] = 0;
+    final[24] = 0;
+    final[25] = 0;
+    final[26] = 0;
+    final[27] = 0;
+    final[28] = 0;
+    final[29] = 0;
+    final[30] = 0;
+    final[31] = 0;
 
     u32 digest[5];
 
@@ -380,34 +356,39 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_m04 (__glo
     digest[3] = SHA1M_D;
     digest[4] = SHA1M_E;
 
-    #pragma unroll 32
-    for (int i = 0; i < 32; i++) final[i] = 0;
+    final[ 0] = swap32_S (w0[0]);
+    final[ 1] = swap32_S (w0[1]);
+    final[ 2] = swap32_S (w0[2]);
+    final[ 3] = swap32_S (w0[3]);
+    final[ 4] = swap32_S (w1[0]);
+    final[ 5] = swap32_S (w1[1]);
+    final[ 6] = swap32_S (w1[2]);
+    final[ 7] = swap32_S (w1[3]);
+    final[ 8] = 0;
+    final[ 9] = 0;
+    final[10] = 0;
+    final[11] = 0;
+    final[12] = 0;
+    final[13] = 0;
+    final[14] = 0;
+    final[15] = 0;
 
-    final[0] = w0[0];
-    final[1] = w0[1];
-    final[2] = w0[2];
-    final[3] = w0[3];
-    final[4] = w1[0];
-    final[5] = w1[1];
-    final[6] = w1[2];
-    final[7] = w1[3];
+    u32 final_len = pw_len;
 
-    u32 final_len = out_len;
-
-    int i;
+    u32 i;
 
     // append MagicArray
 
     for (i = 0; i < lengthMagicArray - 4; i += 4)
     {
-      const u32 tmp = GETSHIFTEDINT (theMagicArray, offsetMagicArray + i);
+      const u32 tmp = GETSHIFTEDINT_CONST (theMagicArray, offsetMagicArray + i);
 
       SETSHIFTEDINT (final, final_len + i, tmp);
     }
 
-    const u32 mask = 0xffffffff >> (((i - lengthMagicArray) & 3) * 8);
+    const u32 mask = 0xffffffff << (((4 - (lengthMagicArray - i)) & 3) * 8);
 
-    const u32 tmp = GETSHIFTEDINT (theMagicArray, offsetMagicArray + i) & mask;
+    const u32 tmp = GETSHIFTEDINT_CONST (theMagicArray, offsetMagicArray + i) & mask;
 
     SETSHIFTEDINT (final, final_len + i, tmp);
 
@@ -417,7 +398,7 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_m04 (__glo
 
     for (i = 0; i < salt_len + 1; i += 4) // +1 for the 0x80
     {
-      const u32 tmp = salt_buf[i / 4]; // attention, int[] not char[]
+      const u32 tmp = swap32_S (salt_buf[i / 4]); // attention, int[] not char[]
 
       SETSHIFTEDINT (final, final_len + i, tmp);
     }
@@ -431,36 +412,26 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_m04 (__glo
 
     for (left = final_len, off = 0; left >= 56; left -= 64, off += 16)
     {
-      swap_buffer (&final[off]);
-
       sha1_transform (&final[off + 0], &final[off + 4], &final[off + 8], &final[off + 12], digest);
     }
 
-    swap_buffer (&final[off]);
-
-    final[off + 14] = 0;
     final[off + 15] = final_len * 8;
 
     sha1_transform (&final[off + 0], &final[off + 4], &final[off + 8], &final[off + 12], digest);
 
-    const u32 r0 = digest[3];
-    const u32 r1 = digest[4];
-    const u32 r2 = digest[2];
-    const u32 r3 = digest[1];
-
-    #include COMPARE_M
+    COMPARE_M_SIMD (digest[3], digest[4], digest[2], digest[1]);
   }
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_m08 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m07800_m08 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_m16 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m07800_m16 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_s04 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m07800_s04 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * modifier
@@ -477,18 +448,16 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_s04 (__glo
   if (gid >= gid_max) return;
 
   u32 pw_buf0[4];
-
-  pw_buf0[0] = pws[gid].i[ 0];
-  pw_buf0[1] = pws[gid].i[ 1];
-  pw_buf0[2] = pws[gid].i[ 2];
-  pw_buf0[3] = pws[gid].i[ 3];
-
   u32 pw_buf1[4];
 
-  pw_buf1[0] = pws[gid].i[ 4];
-  pw_buf1[1] = pws[gid].i[ 5];
-  pw_buf1[2] = pws[gid].i[ 6];
-  pw_buf1[3] = pws[gid].i[ 7];
+  pw_buf0[0] = pws[gid].i[0];
+  pw_buf0[1] = pws[gid].i[1];
+  pw_buf0[2] = pws[gid].i[2];
+  pw_buf0[3] = pws[gid].i[3];
+  pw_buf1[0] = pws[gid].i[4];
+  pw_buf1[1] = pws[gid].i[5];
+  pw_buf1[2] = pws[gid].i[6];
+  pw_buf1[3] = pws[gid].i[7];
 
   const u32 pw_len = pws[gid].pw_len;
 
@@ -525,73 +494,44 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_s04 (__glo
    * loop
    */
 
-  for (u32 il_pos = 0; il_pos < rules_cnt; il_pos++)
+  for (u32 il_pos = 0; il_pos < il_cnt; il_pos += VECT_SIZE)
   {
-    u32 w0[4];
+    u32x w0[4] = { 0 };
+    u32x w1[4] = { 0 };
+    u32x w2[4] = { 0 };
+    u32x w3[4] = { 0 };
 
-    w0[0] = pw_buf0[0];
-    w0[1] = pw_buf0[1];
-    w0[2] = pw_buf0[2];
-    w0[3] = pw_buf0[3];
-
-    u32 w1[4];
-
-    w1[0] = pw_buf1[0];
-    w1[1] = pw_buf1[1];
-    w1[2] = pw_buf1[2];
-    w1[3] = pw_buf1[3];
-
-    u32 w2[4];
-
-    w2[0] = 0;
-    w2[1] = 0;
-    w2[2] = 0;
-    w2[3] = 0;
-
-    u32 w3[4];
-
-    w3[0] = 0;
-    w3[1] = 0;
-    w3[2] = 0;
-    w3[3] = 0;
-
-    const u32 out_len = apply_rules (rules_buf[il_pos].cmds, w0, w1, pw_len);
+    const u32x out_len = apply_rules_vect (pw_buf0, pw_buf1, pw_len, rules_buf, il_pos, w0, w1);
 
     /**
-     * append salt
+     * SAP
      */
 
     u32 s0[4];
+    u32 s1[4];
+    u32 s2[4];
+    u32 s3[4];
 
     s0[0] = salt_buf[0];
     s0[1] = salt_buf[1];
     s0[2] = salt_buf[2];
     s0[3] = salt_buf[3];
-
-    u32 s1[4];
-
     s1[0] = salt_buf[4];
     s1[1] = salt_buf[5];
     s1[2] = salt_buf[6];
     s1[3] = salt_buf[7];
-
-    u32 s2[4];
-
     s2[0] = 0;
     s2[1] = 0;
     s2[2] = 0;
     s2[3] = 0;
-
-    u32 s3[4];
-
     s3[0] = 0;
     s3[1] = 0;
     s3[2] = 0;
     s3[3] = 0;
 
-    switch_buffer_by_offset (s0, s1, s2, s3, out_len);
+    switch_buffer_by_offset_le_VV (s0, s1, s2, s3, out_len);
 
-    const u32 pw_salt_len = out_len + salt_len;
+    const u32x pw_salt_len = out_len + salt_len;
 
     /**
      * sha1
@@ -615,6 +555,22 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_s04 (__glo
     final[13] = swap32 (w3[1] | s3[1]);
     final[14] = 0;
     final[15] = pw_salt_len * 8;
+    final[16] = 0;
+    final[17] = 0;
+    final[18] = 0;
+    final[19] = 0;
+    final[20] = 0;
+    final[21] = 0;
+    final[22] = 0;
+    final[23] = 0;
+    final[24] = 0;
+    final[25] = 0;
+    final[26] = 0;
+    final[27] = 0;
+    final[28] = 0;
+    final[29] = 0;
+    final[30] = 0;
+    final[31] = 0;
 
     u32 digest[5];
 
@@ -660,34 +616,39 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_s04 (__glo
     digest[3] = SHA1M_D;
     digest[4] = SHA1M_E;
 
-    #pragma unroll 32
-    for (int i = 0; i < 32; i++) final[i] = 0;
+    final[ 0] = swap32_S (w0[0]);
+    final[ 1] = swap32_S (w0[1]);
+    final[ 2] = swap32_S (w0[2]);
+    final[ 3] = swap32_S (w0[3]);
+    final[ 4] = swap32_S (w1[0]);
+    final[ 5] = swap32_S (w1[1]);
+    final[ 6] = swap32_S (w1[2]);
+    final[ 7] = swap32_S (w1[3]);
+    final[ 8] = 0;
+    final[ 9] = 0;
+    final[10] = 0;
+    final[11] = 0;
+    final[12] = 0;
+    final[13] = 0;
+    final[14] = 0;
+    final[15] = 0;
 
-    final[0] = w0[0];
-    final[1] = w0[1];
-    final[2] = w0[2];
-    final[3] = w0[3];
-    final[4] = w1[0];
-    final[5] = w1[1];
-    final[6] = w1[2];
-    final[7] = w1[3];
+    u32 final_len = pw_len;
 
-    u32 final_len = out_len;
-
-    int i;
+    u32 i;
 
     // append MagicArray
 
     for (i = 0; i < lengthMagicArray - 4; i += 4)
     {
-      const u32 tmp = GETSHIFTEDINT (theMagicArray, offsetMagicArray + i);
+      const u32 tmp = GETSHIFTEDINT_CONST (theMagicArray, offsetMagicArray + i);
 
       SETSHIFTEDINT (final, final_len + i, tmp);
     }
 
-    const u32 mask = 0xffffffff >> (((i - lengthMagicArray) & 3) * 8);
+    const u32 mask = 0xffffffff << (((4 - (lengthMagicArray - i)) & 3) * 8);
 
-    const u32 tmp = GETSHIFTEDINT (theMagicArray, offsetMagicArray + i) & mask;
+    const u32 tmp = GETSHIFTEDINT_CONST (theMagicArray, offsetMagicArray + i) & mask;
 
     SETSHIFTEDINT (final, final_len + i, tmp);
 
@@ -697,7 +658,7 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_s04 (__glo
 
     for (i = 0; i < salt_len + 1; i += 4) // +1 for the 0x80
     {
-      const u32 tmp = salt_buf[i / 4]; // attention, int[] not char[]
+      const u32 tmp = swap32_S (salt_buf[i / 4]); // attention, int[] not char[]
 
       SETSHIFTEDINT (final, final_len + i, tmp);
     }
@@ -711,31 +672,21 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_s04 (__glo
 
     for (left = final_len, off = 0; left >= 56; left -= 64, off += 16)
     {
-      swap_buffer (&final[off]);
-
       sha1_transform (&final[off + 0], &final[off + 4], &final[off + 8], &final[off + 12], digest);
     }
 
-    swap_buffer (&final[off]);
-
-    final[off + 14] = 0;
     final[off + 15] = final_len * 8;
 
     sha1_transform (&final[off + 0], &final[off + 4], &final[off + 8], &final[off + 12], digest);
 
-    const u32 r0 = digest[3];
-    const u32 r1 = digest[4];
-    const u32 r2 = digest[2];
-    const u32 r3 = digest[1];
-
-    #include COMPARE_S
+    COMPARE_S_SIMD (digest[3], digest[4], digest[2], digest[1]);
   }
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_s08 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m07800_s08 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07800_s16 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m07800_s16 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
 }

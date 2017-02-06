@@ -1,25 +1,19 @@
 /**
- * Author......: Jens Steube <jens.steube@gmail.com>
+ * Author......: See docs/credits.txt
  * License.....: MIT
  */
 
 #define _RAR3_
 
-#include "include/constants.h"
-#include "include/kernel_vendor.h"
+#include "inc_vendor.cl"
+#include "inc_hash_constants.h"
+#include "inc_hash_functions.cl"
 
-#define DGST_R0 0
-#define DGST_R1 1
-#define DGST_R2 2
-#define DGST_R3 3
+#include "inc_types.cl"
+#include "inc_common.cl"
 
-#include "include/kernel_functions.c"
-
-#include "OpenCL/types_ocl.c"
-#include "OpenCL/common.c"
-
-#define COMPARE_S "OpenCL/check_single_comp4.c"
-#define COMPARE_M "OpenCL/check_multi_comp4.c"
+#define COMPARE_S "inc_comp_single.cl"
+#define COMPARE_M "inc_comp_multi.cl"
 
 #define ROUNDS 0x40000
 
@@ -28,6 +22,8 @@
 
 #define PUTCHAR_BE(a,p,c) ((u8 *)(a))[(p) ^ 3] = (u8) (c)
 #define GETCHAR_BE(a,p)   ((u8 *)(a))[(p) ^ 3]
+
+#define MIN(a,b) (((a) < (b)) ? (a) : (b))
 
 __constant u32 te0[256] =
 {
@@ -716,7 +712,7 @@ __constant u32 rcon[] =
   0x1b000000, 0x36000000,
 };
 
-static void AES128_ExpandKey (u32 *userkey, u32 *rek, __local u32 s_te0[256], __local u32 s_te1[256], __local u32 s_te2[256], __local u32 s_te3[256], __local u32 s_te4[256])
+static void AES128_ExpandKey (u32 *userkey, u32 *rek, __local u32 *s_te0, __local u32 *s_te1, __local u32 *s_te2, __local u32 *s_te3, __local u32 *s_te4)
 {
   rek[0] = userkey[0];
   rek[1] = userkey[1];
@@ -742,9 +738,9 @@ static void AES128_ExpandKey (u32 *userkey, u32 *rek, __local u32 s_te0[256], __
   }
 }
 
-static void AES128_InvertKey (u32 *rdk, __local u32 s_td0[256], __local u32 s_td1[256], __local u32 s_td2[256], __local u32 s_td3[256], __local u32 s_td4[256], __local u32 s_te0[256], __local u32 s_te1[256], __local u32 s_te2[256], __local u32 s_te3[256], __local u32 s_te4[256])
+static void AES128_InvertKey (u32 *rdk, __local u32 *s_td0, __local u32 *s_td1, __local u32 *s_td2, __local u32 *s_td3, __local u32 *s_td4, __local u32 *s_te0, __local u32 *s_te1, __local u32 *s_te2, __local u32 *s_te3, __local u32 *s_te4)
 {
-  for (u32 i = 0, j = 40; i < j; i += 4, j -= 4)
+  for (u32 i = 0, j = 40; i < 20; i += 4, j -= 4)
   {
     u32 temp;
 
@@ -782,7 +778,7 @@ static void AES128_InvertKey (u32 *rdk, __local u32 s_td0[256], __local u32 s_td
   }
 }
 
-static void AES128_decrypt (const u32 *in, u32 *out, const u32 *rdk, __local u32 s_td0[256], __local u32 s_td1[256], __local u32 s_td2[256], __local u32 s_td3[256], __local u32 s_td4[256])
+static void AES128_decrypt (const u32 *in, u32 *out, const u32 *rdk, __local u32 *s_td0, __local u32 *s_td1, __local u32 *s_td2, __local u32 *s_td3, __local u32 *s_td4)
 {
   u32 s0 = in[0] ^ rdk[0];
   u32 s1 = in[1] ^ rdk[1];
@@ -984,7 +980,7 @@ static void sha1_transform (const u32 w[16], u32 digest[5])
   digest[4] += E;
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m12500_init (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global rar3_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global pbkdf2_sha1_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m12500_init (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global rar3_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global pbkdf2_sha1_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -1001,7 +997,7 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m12500_init (__gl
   tmps[gid].dgst[0][4] = SHA1M_E;
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m12500_loop (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global rar3_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global pbkdf2_sha1_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m12500_loop (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global rar3_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global pbkdf2_sha1_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   const u32 gid = get_global_id (0);
 
@@ -1015,7 +1011,7 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m12500_loop (__gl
   pw_buf[3] = pws[gid].i[3];
   pw_buf[4] = pws[gid].i[4];
 
-  const u32 pw_len = pws[gid].pw_len;
+  const u32 pw_len = MIN (pws[gid].pw_len, 20);
 
   u32 salt_buf[2];
 
@@ -1099,7 +1095,7 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m12500_loop (__gl
   tmps[gid].dgst[init_pos + 1][4] = dgst[4];
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m12500_comp (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global rar3_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global pbkdf2_sha1_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m12500_comp (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global rar3_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global pbkdf2_sha1_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -1107,12 +1103,11 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m12500_comp (__gl
 
   const u32 gid = get_global_id (0);
   const u32 lid = get_local_id (0);
+  const u32 lsz = get_local_size (0);
 
   /**
    * aes shared
    */
-
-  const u32 lid4 = lid * 4;
 
   __local u32 s_td0[256];
   __local u32 s_td1[256];
@@ -1126,61 +1121,30 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m12500_comp (__gl
   __local u32 s_te3[256];
   __local u32 s_te4[256];
 
-  s_td0[lid4 + 0] = td0[lid4 + 0];
-  s_td0[lid4 + 1] = td0[lid4 + 1];
-  s_td0[lid4 + 2] = td0[lid4 + 2];
-  s_td0[lid4 + 3] = td0[lid4 + 3];
+  for (u32 i = lid; i < 256; i += lsz)
+  {
+    s_td0[i] = td0[i];
+    s_td1[i] = td1[i];
+    s_td2[i] = td2[i];
+    s_td3[i] = td3[i];
+    s_td4[i] = td4[i];
 
-  s_td1[lid4 + 0] = td1[lid4 + 0];
-  s_td1[lid4 + 1] = td1[lid4 + 1];
-  s_td1[lid4 + 2] = td1[lid4 + 2];
-  s_td1[lid4 + 3] = td1[lid4 + 3];
-
-  s_td2[lid4 + 0] = td2[lid4 + 0];
-  s_td2[lid4 + 1] = td2[lid4 + 1];
-  s_td2[lid4 + 2] = td2[lid4 + 2];
-  s_td2[lid4 + 3] = td2[lid4 + 3];
-
-  s_td3[lid4 + 0] = td3[lid4 + 0];
-  s_td3[lid4 + 1] = td3[lid4 + 1];
-  s_td3[lid4 + 2] = td3[lid4 + 2];
-  s_td3[lid4 + 3] = td3[lid4 + 3];
-
-  s_td4[lid4 + 0] = td4[lid4 + 0];
-  s_td4[lid4 + 1] = td4[lid4 + 1];
-  s_td4[lid4 + 2] = td4[lid4 + 2];
-  s_td4[lid4 + 3] = td4[lid4 + 3];
-
-  s_te0[lid4 + 0] = te0[lid4 + 0];
-  s_te0[lid4 + 1] = te0[lid4 + 1];
-  s_te0[lid4 + 2] = te0[lid4 + 2];
-  s_te0[lid4 + 3] = te0[lid4 + 3];
-
-  s_te1[lid4 + 0] = te1[lid4 + 0];
-  s_te1[lid4 + 1] = te1[lid4 + 1];
-  s_te1[lid4 + 2] = te1[lid4 + 2];
-  s_te1[lid4 + 3] = te1[lid4 + 3];
-
-  s_te2[lid4 + 0] = te2[lid4 + 0];
-  s_te2[lid4 + 1] = te2[lid4 + 1];
-  s_te2[lid4 + 2] = te2[lid4 + 2];
-  s_te2[lid4 + 3] = te2[lid4 + 3];
-
-  s_te3[lid4 + 0] = te3[lid4 + 0];
-  s_te3[lid4 + 1] = te3[lid4 + 1];
-  s_te3[lid4 + 2] = te3[lid4 + 2];
-  s_te3[lid4 + 3] = te3[lid4 + 3];
-
-  s_te4[lid4 + 0] = te4[lid4 + 0];
-  s_te4[lid4 + 1] = te4[lid4 + 1];
-  s_te4[lid4 + 2] = te4[lid4 + 2];
-  s_te4[lid4 + 3] = te4[lid4 + 3];
+    s_te0[i] = te0[i];
+    s_te1[i] = te1[i];
+    s_te2[i] = te2[i];
+    s_te3[i] = te3[i];
+    s_te4[i] = te4[i];
+  }
 
   barrier (CLK_LOCAL_MEM_FENCE);
 
   if (gid >= gid_max) return;
 
-  const u32 pw_len = pws[gid].pw_len;
+  /**
+   * base
+   */
+
+  const u32 pw_len = MIN (pws[gid].pw_len, 20);
 
   const u32 salt_len = 8;
 
@@ -1256,16 +1220,16 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m12500_comp (__gl
     pw_buf[3] = pws[gid].i[3];
     pw_buf[4] = pws[gid].i[4];
 
-    const u32 pw_len = pws[gid].pw_len;
+    //const u32 pw_len = pws[gid].pw_len;
 
     u32 salt_buf[2];
 
     salt_buf[0] = salt_bufs[salt_pos].salt_buf[0];
     salt_buf[1] = salt_bufs[salt_pos].salt_buf[1];
 
-    const u32 salt_len = 8;
+    //const u32 salt_len = 8;
 
-    const u32 p3 = (pw_len * 2) + salt_len + 3;
+    //const u32 p3 = (pw_len * 2) + salt_len + 3;
 
     u32 w[16];
 

@@ -1,32 +1,27 @@
 /**
- * Author......: Jens Steube <jens.steube@gmail.com>
+ * Author......: See docs/credits.txt
  * License.....: MIT
- * NOTE........: sboxes were taken from JtR, license below
+ * NOTE........: sboxes for maxwell were taken from DeepLearningJohnDoe, license below
+ *             : sboxes for others were takes fron JtR, license below
  */
 
 #define _DES_
 
-#include "include/constants.h"
-#include "include/kernel_vendor.h"
+#include "inc_vendor.cl"
+#include "inc_hash_constants.h"
+#include "inc_hash_functions.cl"
+#include "inc_types.cl"
+#include "inc_common.cl"
 
-#define DGST_R0 0
-#define DGST_R1 1
-#define DGST_R2 2
-#define DGST_R3 3
-
-#include "include/kernel_functions.c"
-#include "OpenCL/types_ocl.c"
-#include "OpenCL/common.c"
-
-#define COMPARE_S "OpenCL/check_single_comp4_bs.c"
-#define COMPARE_M "OpenCL/check_multi_comp4_bs.c"
+#define COMPARE_S "inc_comp_single_bs.cl"
+#define COMPARE_M "inc_comp_multi_bs.cl"
 
 #ifdef IS_NV
 #define KXX_DECL
 #endif
 
 #ifdef IS_AMD
-#define KXX_DECL  volatile
+#define KXX_DECL volatile
 #endif
 
 #ifdef IS_GENERIC
@@ -928,489 +923,471 @@ static void s8 (const u32 a1, const u32 a2, const u32 a3, const u32 a4, const u3
  * The effort has been sponsored by Rapid7: http://www.rapid7.com
  */
 
-#define vnot(dst, a)            (dst) = ~(a)
-#define vand(dst, a, b)         (dst) = (a) & (b)
-#define vor(dst, a, b)          (dst) = (a) | (b)
-#define vandn(dst, a, b)        (dst) = (a) & ~(b)
-#define vxor(dst, a, b)         (dst) = (a) ^ (b)
-#define vsel(dst, a, b, c)      (dst) = bitselect((a),(b),(c))
+#define vnot(d,a)     (d) = ~(a)
+#define vor(d,a,b)    (d) = (a) | (b)
+#define vxor(d,a,b)   (d) = (a) ^ (b)
+#define vsel(d,a,b,c) (d) = bitselect ((a), (b), (c))
 
-static void
-s1(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, u32 a6,
-    u32 * out1, u32 * out2, u32 * out3, u32 * out4)
+static void s1 (const u32 a1, const u32 a2, const u32 a3, const u32 a4, const u32 a5, const u32 a6, u32 *out1, u32 *out2, u32 *out3, u32 *out4)
 {
-  u32 x0F0F3333, x3C3C3C3C, x55FF55FF, x69C369C3, x0903B73F, x09FCB7C0,
-      x5CA9E295;
-  u32 x55AFD1B7, x3C3C69C3, x6993B874;
-  u32 x5CEDE59F, x09FCE295, x5D91A51E, x529E962D;
-  u32 x29EEADC0, x4B8771A3, x428679F3, x6B68D433;
-  u32 x5BA7E193, x026F12F3, x6B27C493, x94D83B6C;
-  u32 x965E0B0F, x3327A113, x847F0A1F, xD6E19C32;
-  u32 x0DBCE883, x3A25A215, x37994A96;
-  u32 x8A487EA7, x8B480F07, xB96C2D16;
-  u32 x0, x1, x2, x3;
+	u32 x0F0F3333, x3C3C3C3C, x55FF55FF, x69C369C3, x0903B73F, x09FCB7C0, x5CA9E295;
+	u32 x55AFD1B7, x3C3C69C3, x6993B874;
+	u32 x5CEDE59F, x09FCE295, x5D91A51E, x529E962D;
+	u32 x29EEADC0, x4B8771A3, x428679F3, x6B68D433;
+	u32 x5BA7E193, x026F12F3, x6B27C493, x94D83B6C;
+	u32 x965E0B0F, x3327A113, x847F0A1F, xD6E19C32;
+	u32 x0DBCE883, x3A25A215, x37994A96;
+	u32 xC9C93B62, x89490F02, xB96C2D16;
+	u32 x0, x1, x2, x3;
 
-  vsel(x0F0F3333, a3, a2, a5);
-  vxor(x3C3C3C3C, a2, a3);
-  vor(x55FF55FF, a1, a4);
-  vxor(x69C369C3, x3C3C3C3C, x55FF55FF);
-  vsel(x0903B73F, a5, x0F0F3333, x69C369C3);
-  vxor(x09FCB7C0, a4, x0903B73F);
-  vxor(x5CA9E295, a1, x09FCB7C0);
+	vsel(x0F0F3333, a3, a2, a5);
+	vxor(x3C3C3C3C, a2, a3);
+	vor(x55FF55FF, a1, a4);
+	vxor(x69C369C3, x3C3C3C3C, x55FF55FF);
+	vsel(x0903B73F, a5, x0F0F3333, x69C369C3);
+	vxor(x09FCB7C0, a4, x0903B73F);
+	vxor(x5CA9E295, a1, x09FCB7C0);
 
-  vsel(x55AFD1B7, x5CA9E295, x55FF55FF, x0F0F3333);
-  vsel(x3C3C69C3, x3C3C3C3C, x69C369C3, a5);
-  vxor(x6993B874, x55AFD1B7, x3C3C69C3);
+	vsel(x55AFD1B7, x5CA9E295, x55FF55FF, x0F0F3333);
+	vsel(x3C3C69C3, x3C3C3C3C, x69C369C3, a5);
+	vxor(x6993B874, x55AFD1B7, x3C3C69C3);
 
-  vsel(x5CEDE59F, x55FF55FF, x5CA9E295, x6993B874);
-  vsel(x09FCE295, x09FCB7C0, x5CA9E295, a5);
-  vsel(x5D91A51E, x5CEDE59F, x6993B874, x09FCE295);
-  vxor(x529E962D, x0F0F3333, x5D91A51E);
+	vsel(x5CEDE59F, x55FF55FF, x5CA9E295, x6993B874);
+	vsel(x09FCE295, x09FCB7C0, x5CA9E295, a5);
+	vsel(x5D91A51E, x5CEDE59F, x6993B874, x09FCE295);
+	vxor(x529E962D, x0F0F3333, x5D91A51E);
 
-  vsel(x29EEADC0, x69C369C3, x09FCB7C0, x5CEDE59F);
-  vsel(x4B8771A3, x0F0F3333, x69C369C3, x5CA9E295);
-  vsel(x428679F3, a5, x4B8771A3, x529E962D);
-  vxor(x6B68D433, x29EEADC0, x428679F3);
+	vsel(x29EEADC0, x69C369C3, x09FCB7C0, x5CEDE59F);
+	vsel(x4B8771A3, x0F0F3333, x69C369C3, x5CA9E295);
+	vsel(x428679F3, a5, x4B8771A3, x529E962D);
+	vxor(x6B68D433, x29EEADC0, x428679F3);
 
-  vsel(x5BA7E193, x5CA9E295, x4B8771A3, a3);
-  vsel(x026F12F3, a4, x0F0F3333, x529E962D);
-  vsel(x6B27C493, x6B68D433, x5BA7E193, x026F12F3);
-  vnot(x94D83B6C, x6B27C493);
-  vsel(x0, x94D83B6C, x6B68D433, a6);
-  vxor(*out1, *out1, x0);
+	vsel(x5BA7E193, x5CA9E295, x4B8771A3, a3);
+	vsel(x026F12F3, a4, x0F0F3333, x529E962D);
+	vsel(x6B27C493, x6B68D433, x5BA7E193, x026F12F3);
+	vnot(x94D83B6C, x6B27C493);
+	vsel(x0, x94D83B6C, x6B68D433, a6);
+	vxor(*out1, *out1, x0);
 
-  vsel(x965E0B0F, x94D83B6C, a3, x428679F3);
-  vsel(x3327A113, x5BA7E193, a2, x69C369C3);
-  vsel(x847F0A1F, x965E0B0F, a4, x3327A113);
-  vxor(xD6E19C32, x529E962D, x847F0A1F);
-  vsel(x1, xD6E19C32, x5CA9E295, a6);
-  vxor(*out2, *out2, x1);
+	vsel(x965E0B0F, x94D83B6C, a3, x428679F3);
+	vsel(x3327A113, x5BA7E193, a2, x69C369C3);
+	vsel(x847F0A1F, x965E0B0F, a4, x3327A113);
+	vxor(xD6E19C32, x529E962D, x847F0A1F);
+	vsel(x1, xD6E19C32, x5CA9E295, a6);
+	vxor(*out2, *out2, x1);
 
-  vsel(x0DBCE883, x09FCE295, x3C3C69C3, x847F0A1F);
-  vsel(x3A25A215, x3327A113, x5CA9E295, x0903B73F);
-  vxor(x37994A96, x0DBCE883, x3A25A215);
-  vsel(x3, x37994A96, x529E962D, a6);
-  vxor(*out4, *out4, x3);
+	vsel(x0DBCE883, x09FCE295, x3C3C69C3, x847F0A1F);
+	vsel(x3A25A215, x3327A113, x5CA9E295, x0903B73F);
+	vxor(x37994A96, x0DBCE883, x3A25A215);
+	vsel(x3, x37994A96, x529E962D, a6);
+	vxor(*out4, *out4, x3);
 
-  vxor(x8A487EA7, x5CA9E295, xD6E19C32);
-  vsel(x8B480F07, a3, x8A487EA7, x847F0A1F);
-  vsel(xB96C2D16, x8B480F07, x3C3C3C3C, x3A25A215);
-  vsel(x2, xB96C2D16, x6993B874, a6);
-  vxor(*out3, *out3, x2);
+	vsel(xC9C93B62, x94D83B6C, x69C369C3, x5D91A51E);
+	vsel(x89490F02, a3, xC9C93B62, x965E0B0F);
+	vsel(xB96C2D16, x89490F02, x3C3C3C3C, x3A25A215);
+	vsel(x2, xB96C2D16, x6993B874, a6);
+	vxor(*out3, *out3, x2);
 }
 
-static void
-s2(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, u32 a6,
-    u32 * out1, u32 * out2, u32 * out3, u32 * out4)
+static void s2 (const u32 a1, const u32 a2, const u32 a3, const u32 a4, const u32 a5, const u32 a6, u32 *out1, u32 *out2, u32 *out3, u32 *out4)
 {
-  u32 x55553333, x0055FF33, x33270F03, x66725A56, x00FFFF00, x668DA556;
-  u32 x0F0F5A56, xF0F0A5A9, xA5A5969A, xA55A699A;
-  u32 x0F5AF03C, x6600FF56, x87A5F09C;
-  u32 xA55A963C, x3C69C30F, xB44BC32D;
-  u32 x66D7CC56, x0F4B0F2D, x699CC37B, x996C66D2;
-  u32 xB46C662D, x278DB412, xB66CB43B;
-  u32 xD2DC4E52, x27993333, xD2994E33;
-  u32 x278D0F2D, x2E0E547B, x09976748;
-  u32 x0, x1, x2, x3;
+	u32 x55553333, x0055FF33, x33270F03, x66725A56, x00FFFF00, x668DA556;
+	u32 x0F0F5A56, xF0F0A5A9, xA5A5969A, xA55A699A;
+	u32 x0F5AF03C, x6600FF56, x87A5F09C;
+	u32 xA55A963C, x3C69C30F, xB44BC32D;
+	u32 x66D7CC56, x0F4B0F2D, x699CC37B, x996C66D2;
+	u32 xB46C662D, x278DB412, xB66CB43B;
+	u32 xD2DC4E52, x27993333, xD2994E33;
+	u32 x278D0F2D, x2E0E547B, x09976748;
+	u32 x0, x1, x2, x3;
 
-  vsel(x55553333, a1, a3, a6);
-  vsel(x0055FF33, a6, x55553333, a5);
-  vsel(x33270F03, a3, a4, x0055FF33);
-  vxor(x66725A56, a1, x33270F03);
-  vxor(x00FFFF00, a5, a6);
-  vxor(x668DA556, x66725A56, x00FFFF00);
+	vsel(x55553333, a1, a3, a6);
+	vsel(x0055FF33, a6, x55553333, a5);
+	vsel(x33270F03, a3, a4, x0055FF33);
+	vxor(x66725A56, a1, x33270F03);
+	vxor(x00FFFF00, a5, a6);
+	vxor(x668DA556, x66725A56, x00FFFF00);
 
-  vsel(x0F0F5A56, a4, x66725A56, a6);
-  vnot(xF0F0A5A9, x0F0F5A56);
-  vxor(xA5A5969A, x55553333, xF0F0A5A9);
-  vxor(xA55A699A, x00FFFF00, xA5A5969A);
-  vsel(x1, xA55A699A, x668DA556, a2);
-  vxor(*out2, *out2, x1);
+	vsel(x0F0F5A56, a4, x66725A56, a6);
+	vnot(xF0F0A5A9, x0F0F5A56);
+	vxor(xA5A5969A, x55553333, xF0F0A5A9);
+	vxor(xA55A699A, x00FFFF00, xA5A5969A);
+	vsel(x1, xA55A699A, x668DA556, a2);
+	vxor(*out2, *out2, x1);
 
-  vxor(x0F5AF03C, a4, x0055FF33);
-  vsel(x6600FF56, x66725A56, a6, x00FFFF00);
-  vsel(x87A5F09C, xA5A5969A, x0F5AF03C, x6600FF56);
+	vxor(x0F5AF03C, a4, x0055FF33);
+	vsel(x6600FF56, x66725A56, a6, x00FFFF00);
+	vsel(x87A5F09C, xA5A5969A, x0F5AF03C, x6600FF56);
 
-  vsel(xA55A963C, xA5A5969A, x0F5AF03C, a5);
-  vxor(x3C69C30F, a3, x0F5AF03C);
-  vsel(xB44BC32D, xA55A963C, x3C69C30F, a1);
+	vsel(xA55A963C, xA5A5969A, x0F5AF03C, a5);
+	vxor(x3C69C30F, a3, x0F5AF03C);
+	vsel(xB44BC32D, xA55A963C, x3C69C30F, a1);
 
-  vsel(x66D7CC56, x66725A56, x668DA556, xA5A5969A);
-  vsel(x0F4B0F2D, a4, xB44BC32D, a5);
-  vxor(x699CC37B, x66D7CC56, x0F4B0F2D);
-  vxor(x996C66D2, xF0F0A5A9, x699CC37B);
-  vsel(x0, x996C66D2, xB44BC32D, a2);
-  vxor(*out1, *out1, x0);
+	vsel(x66D7CC56, x66725A56, x668DA556, xA5A5969A);
+	vsel(x0F4B0F2D, a4, xB44BC32D, a5);
+	vxor(x699CC37B, x66D7CC56, x0F4B0F2D);
+	vxor(x996C66D2, xF0F0A5A9, x699CC37B);
+	vsel(x0, x996C66D2, xB44BC32D, a2);
+	vxor(*out1, *out1, x0);
 
-  vsel(xB46C662D, xB44BC32D, x996C66D2, x00FFFF00);
-  vsel(x278DB412, x668DA556, xA5A5969A, a1);
-  vsel(xB66CB43B, xB46C662D, x278DB412, x6600FF56);
+	vsel(xB46C662D, xB44BC32D, x996C66D2, x00FFFF00);
+	vsel(x278DB412, x668DA556, xA5A5969A, a1);
+	vsel(xB66CB43B, xB46C662D, x278DB412, x6600FF56);
 
-  vsel(xD2DC4E52, x66D7CC56, x996C66D2, xB44BC32D);
-  vsel(x27993333, x278DB412, a3, x0055FF33);
-  vsel(xD2994E33, xD2DC4E52, x27993333, a5);
-  vsel(x3, x87A5F09C, xD2994E33, a2);
-  vxor(*out4, *out4, x3);
+	vsel(xD2DC4E52, x66D7CC56, x996C66D2, xB44BC32D);
+	vsel(x27993333, x278DB412, a3, x0055FF33);
+	vsel(xD2994E33, xD2DC4E52, x27993333, a5);
+	vsel(x3, x87A5F09C, xD2994E33, a2);
+	vxor(*out4, *out4, x3);
 
-  vsel(x278D0F2D, x278DB412, x0F4B0F2D, a6);
-  vsel(x2E0E547B, x0F0F5A56, xB66CB43B, x278D0F2D);
-  vxor(x09976748, x27993333, x2E0E547B);
-  vsel(x2, xB66CB43B, x09976748, a2);
-  vxor(*out3, *out3, x2);
+	vsel(x278D0F2D, x278DB412, x0F4B0F2D, a6);
+	vsel(x2E0E547B, x0F0F5A56, xB66CB43B, x278D0F2D);
+	vxor(x09976748, x27993333, x2E0E547B);
+	vsel(x2, xB66CB43B, x09976748, a2);
+	vxor(*out3, *out3, x2);
 }
 
-static void
-s3(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, u32 a6,
-    u32 * out1, u32 * out2, u32 * out3, u32 * out4)
+static void s3 (const u32 a1, const u32 a2, const u32 a3, const u32 a4, const u32 a5, const u32 a6, u32 *out1, u32 *out2, u32 *out3, u32 *out4)
 {
-  u32 x0F330F33, x0F33F0CC, x5A66A599;
-  u32 x2111B7BB, x03FF3033, x05BB50EE, x074F201F, x265E97A4;
-  u32 x556BA09E, x665A93AC, x99A56C53;
-  u32 x25A1A797, x5713754C, x66559355, x47B135C6;
-  u32 x9A5A5C60, xD07AF8F8, x87698DB4, xE13C1EE1;
-  u32 x9E48CDE4, x655B905E, x00A55CFF, x9E49915E;
-  u32 xD6599874, x05330022, xD2699876;
-  u32 x665F9364, xD573F0F2, xB32C6396;
-  u32 x0, x1, x2, x3;
+	u32 x0F330F33, x0F33F0CC, x5A66A599;
+	u32 x2111B7BB, x03FF3033, x05BB50EE, x074F201F, x265E97A4;
+	u32 x556BA09E, x665A93AC, x99A56C53;
+	u32 x25A1A797, x5713754C, x66559355, x47B135C6;
+	u32 x9A5A5C60, xD07AF8F8, x87698DB4, xE13C1EE1;
+	u32 x000CFFCF, x9A485CCE, x0521DDF4, x9E49915E;
+	u32 xD069F8B4, x030FF0C3, xD2699876;
+	u32 xD579DDF4, xD579F0C3, xB32C6396;
+	u32 x0, x1, x2, x3;
 
-  vsel(x0F330F33, a4, a3, a5);
-  vxor(x0F33F0CC, a6, x0F330F33);
-  vxor(x5A66A599, a2, x0F33F0CC);
+	vsel(x0F330F33, a4, a3, a5);
+	vxor(x0F33F0CC, a6, x0F330F33);
+	vxor(x5A66A599, a2, x0F33F0CC);
 
-  vsel(x2111B7BB, a3, a6, x5A66A599);
-  vsel(x03FF3033, a5, a3, x0F33F0CC);
-  vsel(x05BB50EE, a5, x0F33F0CC, a2);
-  vsel(x074F201F, x03FF3033, a4, x05BB50EE);
-  vxor(x265E97A4, x2111B7BB, x074F201F);
+	vsel(x2111B7BB, a3, a6, x5A66A599);
+	vsel(x03FF3033, a5, a3, x0F33F0CC);
+	vsel(x05BB50EE, a5, x0F33F0CC, a2);
+	vsel(x074F201F, x03FF3033, a4, x05BB50EE);
+	vxor(x265E97A4, x2111B7BB, x074F201F);
 
-  vsel(x556BA09E, x5A66A599, x05BB50EE, a4);
-  vsel(x665A93AC, x556BA09E, x265E97A4, a3);
-  vnot(x99A56C53, x665A93AC);
-  vsel(x1, x265E97A4, x99A56C53, a1);
-  vxor(*out2, *out2, x1);
+	vsel(x556BA09E, x5A66A599, x05BB50EE, a4);
+	vsel(x665A93AC, x556BA09E, x265E97A4, a3);
+	vnot(x99A56C53, x665A93AC);
+	vsel(x1, x265E97A4, x99A56C53, a1);
+	vxor(*out2, *out2, x1);
 
-  vxor(x25A1A797, x03FF3033, x265E97A4);
-  vsel(x5713754C, a2, x0F33F0CC, x074F201F);
-  vsel(x66559355, x665A93AC, a2, a5);
-  vsel(x47B135C6, x25A1A797, x5713754C, x66559355);
+	vxor(x25A1A797, x03FF3033, x265E97A4);
+	vsel(x5713754C, a2, x0F33F0CC, x074F201F);
+	vsel(x66559355, x665A93AC, a2, a5);
+	vsel(x47B135C6, x25A1A797, x5713754C, x66559355);
 
-  vxor(x9A5A5C60, x03FF3033, x99A56C53);
-  vsel(xD07AF8F8, x9A5A5C60, x556BA09E, x5A66A599);
-  vxor(x87698DB4, x5713754C, xD07AF8F8);
-  vxor(xE13C1EE1, x66559355, x87698DB4);
+	vxor(x9A5A5C60, x03FF3033, x99A56C53);
+	vsel(xD07AF8F8, x9A5A5C60, x556BA09E, x5A66A599);
+	vxor(x87698DB4, x5713754C, xD07AF8F8);
+	vxor(xE13C1EE1, x66559355, x87698DB4);
 
-  vsel(x9E48CDE4, x9A5A5C60, x87698DB4, x265E97A4);
-  vsel(x655B905E, x66559355, x05BB50EE, a4);
-  vsel(x00A55CFF, a5, a6, x9A5A5C60);
-  vsel(x9E49915E, x9E48CDE4, x655B905E, x00A55CFF);
-  vsel(x0, x9E49915E, xE13C1EE1, a1);
-  vxor(*out1, *out1, x0);
+	vsel(x000CFFCF, a4, a6, x0F33F0CC);
+	vsel(x9A485CCE, x9A5A5C60, x000CFFCF, x05BB50EE);
+	vsel(x0521DDF4, x87698DB4, a6, x9A5A5C60);
+	vsel(x9E49915E, x9A485CCE, x66559355, x0521DDF4);
+	vsel(x0, x9E49915E, xE13C1EE1, a1);
+	vxor(*out1, *out1, x0);
 
-  vsel(xD6599874, xD07AF8F8, x66559355, x0F33F0CC);
-  vand(x05330022, x0F330F33, x05BB50EE);
-  vsel(xD2699876, xD6599874, x00A55CFF, x05330022);
-  vsel(x3, x5A66A599, xD2699876, a1);
-  vxor(*out4, *out4, x3);
+	vsel(xD069F8B4, xD07AF8F8, x87698DB4, a5);
+	vsel(x030FF0C3, x000CFFCF, x03FF3033, a4);
+	vsel(xD2699876, xD069F8B4, x9E49915E, x030FF0C3);
+	vsel(x3, x5A66A599, xD2699876, a1);
+	vxor(*out4, *out4, x3);
 
-  vsel(x665F9364, x265E97A4, x66559355, x47B135C6);
-  vsel(xD573F0F2, xD07AF8F8, x05330022, a4);
-  vxor(xB32C6396, x665F9364, xD573F0F2);
-  vsel(x2, xB32C6396, x47B135C6, a1);
-  vxor(*out3, *out3, x2);
+	vsel(xD579DDF4, xD07AF8F8, a2, x5713754C);
+	vsel(xD579F0C3, xD579DDF4, x030FF0C3, a6);
+	vxor(xB32C6396, x66559355, xD579F0C3);
+	vsel(x2, xB32C6396, x47B135C6, a1);
+	vxor(*out3, *out3, x2);
 }
 
-static void
-s4(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, u32 a6,
-    u32 * out1, u32 * out2, u32 * out3, u32 * out4)
+static void s4 (const u32 a1, const u32 a2, const u32 a3, const u32 a4, const u32 a5, const u32 a6, u32 *out1, u32 *out2, u32 *out3, u32 *out4)
 {
-  u32 x0505AFAF, x0555AF55, x0A5AA05A, x46566456, x0A0A5F5F, x0AF55FA0,
-      x0AF50F0F, x4CA36B59;
-  u32 xB35C94A6;
-  u32 x01BB23BB, x5050FAFA, xA31C26BE, xA91679E1;
-  u32 x56E9861E;
-  u32 x50E9FA1E, x0AF55F00, x827D9784, xD2946D9A;
-  u32 x31F720B3, x11FB21B3, x4712A7AD, x9586CA37;
-  u32 x0, x1, x2, x3;
+	u32 x0505AFAF, x0555AF55, x0A5AA05A, x46566456, x0A0A5F5F, x0AF55FA0,
+	    x0AF50F0F, x4CA36B59;
+	u32 xB35C94A6;
+	u32 x01BB23BB, x5050FAFA, xA31C26BE, xA91679E1;
+	u32 x56E9861E;
+	u32 x50E9FA1E, x0AF55F00, x827D9784, xD2946D9A;
+	u32 x31F720B3, x11FB21B3, x4712A7AD, x9586CA37;
+	u32 x0, x1, x2, x3;
 
-  vsel(x0505AFAF, a5, a3, a1);
-  vsel(x0555AF55, x0505AFAF, a1, a4);
-  vxor(x0A5AA05A, a3, x0555AF55);
-  vsel(x46566456, a1, x0A5AA05A, a2);
-  vsel(x0A0A5F5F, a3, a5, a1);
-  vxor(x0AF55FA0, a4, x0A0A5F5F);
-  vsel(x0AF50F0F, x0AF55FA0, a3, a5);
-  vxor(x4CA36B59, x46566456, x0AF50F0F);
+	vsel(x0505AFAF, a5, a3, a1);
+	vsel(x0555AF55, x0505AFAF, a1, a4);
+	vxor(x0A5AA05A, a3, x0555AF55);
+	vsel(x46566456, a1, x0A5AA05A, a2);
+	vsel(x0A0A5F5F, a3, a5, a1);
+	vxor(x0AF55FA0, a4, x0A0A5F5F);
+	vsel(x0AF50F0F, x0AF55FA0, a3, a5);
+	vxor(x4CA36B59, x46566456, x0AF50F0F);
 
-  vnot(xB35C94A6, x4CA36B59);
+	vnot(xB35C94A6, x4CA36B59);
 
-  vsel(x01BB23BB, a4, a2, x0555AF55);
-  vxor(x5050FAFA, a1, x0505AFAF);
-  vsel(xA31C26BE, xB35C94A6, x01BB23BB, x5050FAFA);
-  vxor(xA91679E1, x0A0A5F5F, xA31C26BE);
+	vsel(x01BB23BB, a4, a2, x0555AF55);
+	vxor(x5050FAFA, a1, x0505AFAF);
+	vsel(xA31C26BE, xB35C94A6, x01BB23BB, x5050FAFA);
+	vxor(xA91679E1, x0A0A5F5F, xA31C26BE);
 
-  vnot(x56E9861E, xA91679E1);
+	vnot(x56E9861E, xA91679E1);
 
-  vsel(x50E9FA1E, x5050FAFA, x56E9861E, a4);
-  vsel(x0AF55F00, x0AF50F0F, x0AF55FA0, x0A0A5F5F);
-  vsel(x827D9784, xB35C94A6, x0AF55F00, a2);
-  vxor(xD2946D9A, x50E9FA1E, x827D9784);
-  vsel(x2, xD2946D9A, x4CA36B59, a6);
-  vxor(*out3, *out3, x2);
-  vsel(x3, xB35C94A6, xD2946D9A, a6);
-  vxor(*out4, *out4, x3);
+	vsel(x50E9FA1E, x5050FAFA, x56E9861E, a4);
+	vsel(x0AF55F00, x0AF50F0F, x0AF55FA0, x0A0A5F5F);
+	vsel(x827D9784, xB35C94A6, x0AF55F00, a2);
+	vxor(xD2946D9A, x50E9FA1E, x827D9784);
+	vsel(x2, xD2946D9A, x4CA36B59, a6);
+	vxor(*out3, *out3, x2);
+	vsel(x3, xB35C94A6, xD2946D9A, a6);
+	vxor(*out4, *out4, x3);
 
-  vsel(x31F720B3, a2, a4, x0AF55FA0);
-  vsel(x11FB21B3, x01BB23BB, x31F720B3, x5050FAFA);
-  vxor(x4712A7AD, x56E9861E, x11FB21B3);
-  vxor(x9586CA37, xD2946D9A, x4712A7AD);
-  vsel(x0, x56E9861E, x9586CA37, a6);
-  vxor(*out1, *out1, x0);
-  vsel(x1, x9586CA37, xA91679E1, a6);
-  vxor(*out2, *out2, x1);
+	vsel(x31F720B3, a2, a4, x0AF55FA0);
+	vsel(x11FB21B3, x01BB23BB, x31F720B3, x5050FAFA);
+	vxor(x4712A7AD, x56E9861E, x11FB21B3);
+	vxor(x9586CA37, xD2946D9A, x4712A7AD);
+	vsel(x0, x56E9861E, x9586CA37, a6);
+	vxor(*out1, *out1, x0);
+	vsel(x1, x9586CA37, xA91679E1, a6);
+	vxor(*out2, *out2, x1);
 }
 
-static void
-s5(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, u32 a6,
-    u32 * out1, u32 * out2, u32 * out3, u32 * out4)
+static void s5 (const u32 a1, const u32 a2, const u32 a3, const u32 a4, const u32 a5, const u32 a6, u32 *out1, u32 *out2, u32 *out3, u32 *out4)
 {
-  u32 x550F550F, xAAF0AAF0, xA5F5A5F5, x96C696C6, x00FFFF00, x963969C6;
-  u32 x2E3C2E3C, xB73121F7, x1501DF0F, x00558A5F, x2E69A463;
-  u32 x0679ED42, x045157FD, xB32077FF, x9D49D39C;
-  u32 xAC81CFB2, xF72577AF, x5BA4B81D;
-  u32 x5BA477AF, x4895469F, x3A35273A, x1A35669A;
-  u32 x12E6283D, x9E47D3D4, x1A676AB4;
-  u32 x891556DF, xE5E77F82, x6CF2295D;
-  u32 x2E3CA5F5, x9697C1C6, x369CC1D6;
-  u32 x0, x1, x2, x3;
+	u32 x550F550F, xAAF0AAF0, xA5F5A5F5, x96C696C6, x00FFFF00, x963969C6;
+	u32 x2E3C2E3C, xB73121F7, x1501DF0F, x00558A5F, x2E69A463;
+	u32 x0679ED42, x045157FD, xB32077FF, x9D49D39C;
+	u32 xAC81CFB2, xF72577AF, x5BA4B81D;
+	u32 x5BA477AF, x4895469F, x3A35273A, x1A35669A;
+	u32 x12E6283D, x9E47D3D4, x1A676AB4;
+	u32 x891556DF, xE5E77F82, x6CF2295D;
+	u32 x2E3CA5F5, x9697C1C6, x369CC1D6;
+	u32 x0, x1, x2, x3;
 
-  vsel(x550F550F, a1, a3, a5);
-  vnot(xAAF0AAF0, x550F550F);
-  vsel(xA5F5A5F5, xAAF0AAF0, a1, a3);
-  vxor(x96C696C6, a2, xA5F5A5F5);
-  vxor(x00FFFF00, a5, a6);
-  vxor(x963969C6, x96C696C6, x00FFFF00);
+	vsel(x550F550F, a1, a3, a5);
+	vnot(xAAF0AAF0, x550F550F);
+	vsel(xA5F5A5F5, xAAF0AAF0, a1, a3);
+	vxor(x96C696C6, a2, xA5F5A5F5);
+	vxor(x00FFFF00, a5, a6);
+	vxor(x963969C6, x96C696C6, x00FFFF00);
 
-  vsel(x2E3C2E3C, a3, xAAF0AAF0, a2);
-  vsel(xB73121F7, a2, x963969C6, x96C696C6);
-  vsel(x1501DF0F, a6, x550F550F, xB73121F7);
-  vsel(x00558A5F, x1501DF0F, a5, a1);
-  vxor(x2E69A463, x2E3C2E3C, x00558A5F);
+	vsel(x2E3C2E3C, a3, xAAF0AAF0, a2);
+	vsel(xB73121F7, a2, x963969C6, x96C696C6);
+	vsel(x1501DF0F, a6, x550F550F, xB73121F7);
+	vsel(x00558A5F, x1501DF0F, a5, a1);
+	vxor(x2E69A463, x2E3C2E3C, x00558A5F);
 
-  vsel(x0679ED42, x00FFFF00, x2E69A463, x96C696C6);
-  vsel(x045157FD, a6, a1, x0679ED42);
-  vsel(xB32077FF, xB73121F7, a6, x045157FD);
-  vxor(x9D49D39C, x2E69A463, xB32077FF);
-  vsel(x2, x9D49D39C, x2E69A463, a4);
-  vxor(*out3, *out3, x2);
+	vsel(x0679ED42, x00FFFF00, x2E69A463, x96C696C6);
+	vsel(x045157FD, a6, a1, x0679ED42);
+	vsel(xB32077FF, xB73121F7, a6, x045157FD);
+	vxor(x9D49D39C, x2E69A463, xB32077FF);
+	vsel(x2, x9D49D39C, x2E69A463, a4);
+	vxor(*out3, *out3, x2);
 
-  vsel(xAC81CFB2, xAAF0AAF0, x1501DF0F, x0679ED42);
-  vsel(xF72577AF, xB32077FF, x550F550F, a1);
-  vxor(x5BA4B81D, xAC81CFB2, xF72577AF);
-  vsel(x1, x5BA4B81D, x963969C6, a4);
-  vxor(*out2, *out2, x1);
+	vsel(xAC81CFB2, xAAF0AAF0, x1501DF0F, x0679ED42);
+	vsel(xF72577AF, xB32077FF, x550F550F, a1);
+	vxor(x5BA4B81D, xAC81CFB2, xF72577AF);
+	vsel(x1, x5BA4B81D, x963969C6, a4);
+	vxor(*out2, *out2, x1);
 
-  vsel(x5BA477AF, x5BA4B81D, xF72577AF, a6);
-  vsel(x4895469F, x5BA477AF, x00558A5F, a2);
-  vsel(x3A35273A, x2E3C2E3C, a2, x963969C6);
-  vsel(x1A35669A, x4895469F, x3A35273A, x5BA4B81D);
+	vsel(x5BA477AF, x5BA4B81D, xF72577AF, a6);
+	vsel(x4895469F, x5BA477AF, x00558A5F, a2);
+	vsel(x3A35273A, x2E3C2E3C, a2, x963969C6);
+	vsel(x1A35669A, x4895469F, x3A35273A, x5BA4B81D);
 
-  vsel(x12E6283D, a5, x5BA4B81D, x963969C6);
-  vsel(x9E47D3D4, x96C696C6, x9D49D39C, xAC81CFB2);
-  vsel(x1A676AB4, x12E6283D, x9E47D3D4, x4895469F);
+	vsel(x12E6283D, a5, x5BA4B81D, x963969C6);
+	vsel(x9E47D3D4, x96C696C6, x9D49D39C, xAC81CFB2);
+	vsel(x1A676AB4, x12E6283D, x9E47D3D4, x4895469F);
 
-  vsel(x891556DF, xB32077FF, x4895469F, x3A35273A);
-  vsel(xE5E77F82, xF72577AF, x00FFFF00, x12E6283D);
-  vxor(x6CF2295D, x891556DF, xE5E77F82);
-  vsel(x3, x1A35669A, x6CF2295D, a4);
-  vxor(*out4, *out4, x3);
+	vsel(x891556DF, xB32077FF, x4895469F, x3A35273A);
+	vsel(xE5E77F82, xF72577AF, x00FFFF00, x12E6283D);
+	vxor(x6CF2295D, x891556DF, xE5E77F82);
+	vsel(x3, x1A35669A, x6CF2295D, a4);
+	vxor(*out4, *out4, x3);
 
-  vsel(x2E3CA5F5, x2E3C2E3C, xA5F5A5F5, a6);
-  vsel(x9697C1C6, x96C696C6, x963969C6, x045157FD);
-  vsel(x369CC1D6, x2E3CA5F5, x9697C1C6, x5BA477AF);
-  vsel(x0, x369CC1D6, x1A676AB4, a4);
-  vxor(*out1, *out1, x0);
+	vsel(x2E3CA5F5, x2E3C2E3C, xA5F5A5F5, a6);
+	vsel(x9697C1C6, x96C696C6, x963969C6, x045157FD);
+	vsel(x369CC1D6, x2E3CA5F5, x9697C1C6, x5BA477AF);
+	vsel(x0, x369CC1D6, x1A676AB4, a4);
+	vxor(*out1, *out1, x0);
 }
 
-static void
-s6(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, u32 a6,
-    u32 * out1, u32 * out2, u32 * out3, u32 * out4)
+static void s6 (const u32 a1, const u32 a2, const u32 a3, const u32 a4, const u32 a5, const u32 a6, u32 *out1, u32 *out2, u32 *out3, u32 *out4)
 {
-  u32 x555500FF, x666633CC, x606F30CF, x353A659A, x353A9A65, xCAC5659A;
-  u32 x353A6565, x0A3F0A6F, x6C5939A3, x5963A3C6;
-  u32 x35FF659A, x3AF06A95, x05CF0A9F, x16E94A97;
-  u32 x86CD4C9B, x12E0FFFD, x942D9A67;
-  u32 x142956AB, x455D45DF, x1C3EE619;
-  u32 x2AEA70D5, x20CF7A9F, x3CF19C86, x69A49C79;
-  u32 x840DBB67, x6DA19C1E, x925E63E1;
-  u32 x9C3CA761, x257A75D5, xB946D2B4;
-  u32 x0, x1, x2, x3;
+	u32 x555500FF, x666633CC, x606F30CF, x353A659A, x353A9A65, xCAC5659A;
+	u32 x353A6565, x0A3F0A6F, x6C5939A3, x5963A3C6;
+	u32 x35FF659A, x3AF06A95, x05CF0A9F, x16E94A97;
+	u32 x86CD4C9B, x12E0FFFD, x942D9A67;
+	u32 x142956AB, x455D45DF, x1C3EE619;
+	u32 x2AEA70D5, x20CF7A9F, x3CF19C86, x69A49C79;
+	u32 x840DBB67, x6DA19C1E, x925E63E1;
+	u32 x9C3CA761, x257A75D5, xB946D2B4;
+	u32 x0, x1, x2, x3;
 
-  vsel(x555500FF, a1, a4, a5);
-  vxor(x666633CC, a2, x555500FF);
-  vsel(x606F30CF, x666633CC, a4, a3);
-  vxor(x353A659A, a1, x606F30CF);
-  vxor(x353A9A65, a5, x353A659A);
-  vnot(xCAC5659A, x353A9A65);
+	vsel(x555500FF, a1, a4, a5);
+	vxor(x666633CC, a2, x555500FF);
+	vsel(x606F30CF, x666633CC, a4, a3);
+	vxor(x353A659A, a1, x606F30CF);
+	vxor(x353A9A65, a5, x353A659A);
+	vnot(xCAC5659A, x353A9A65);
 
-  vsel(x353A6565, x353A659A, x353A9A65, a4);
-  vsel(x0A3F0A6F, a3, a4, x353A6565);
-  vxor(x6C5939A3, x666633CC, x0A3F0A6F);
-  vxor(x5963A3C6, x353A9A65, x6C5939A3);
+	vsel(x353A6565, x353A659A, x353A9A65, a4);
+	vsel(x0A3F0A6F, a3, a4, x353A6565);
+	vxor(x6C5939A3, x666633CC, x0A3F0A6F);
+	vxor(x5963A3C6, x353A9A65, x6C5939A3);
 
-  vsel(x35FF659A, a4, x353A659A, x353A6565);
-  vxor(x3AF06A95, a3, x35FF659A);
-  vsel(x05CF0A9F, a4, a3, x353A9A65);
-  vsel(x16E94A97, x3AF06A95, x05CF0A9F, x6C5939A3);
+	vsel(x35FF659A, a4, x353A659A, x353A6565);
+	vxor(x3AF06A95, a3, x35FF659A);
+	vsel(x05CF0A9F, a4, a3, x353A9A65);
+	vsel(x16E94A97, x3AF06A95, x05CF0A9F, x6C5939A3);
 
-  vsel(x86CD4C9B, xCAC5659A, x05CF0A9F, x6C5939A3);
-  vsel(x12E0FFFD, a5, x3AF06A95, x16E94A97);
-  vsel(x942D9A67, x86CD4C9B, x353A9A65, x12E0FFFD);
-  vsel(x0, xCAC5659A, x942D9A67, a6);
-  vxor(*out1, *out1, x0);
+	vsel(x86CD4C9B, xCAC5659A, x05CF0A9F, x6C5939A3);
+	vsel(x12E0FFFD, a5, x3AF06A95, x16E94A97);
+	vsel(x942D9A67, x86CD4C9B, x353A9A65, x12E0FFFD);
+	vsel(x0, xCAC5659A, x942D9A67, a6);
+	vxor(*out1, *out1, x0);
 
-  vsel(x142956AB, x353A659A, x942D9A67, a2);
-  vsel(x455D45DF, a1, x86CD4C9B, x142956AB);
-  vxor(x1C3EE619, x5963A3C6, x455D45DF);
-  vsel(x3, x5963A3C6, x1C3EE619, a6);
-  vxor(*out4, *out4, x3);
+	vsel(x142956AB, x353A659A, x942D9A67, a2);
+	vsel(x455D45DF, a1, x86CD4C9B, x142956AB);
+	vxor(x1C3EE619, x5963A3C6, x455D45DF);
+	vsel(x3, x5963A3C6, x1C3EE619, a6);
+	vxor(*out4, *out4, x3);
 
-  vsel(x2AEA70D5, x3AF06A95, x606F30CF, x353A9A65);
-  vsel(x20CF7A9F, x2AEA70D5, x05CF0A9F, x0A3F0A6F);
-  vxor(x3CF19C86, x1C3EE619, x20CF7A9F);
-  vxor(x69A49C79, x555500FF, x3CF19C86);
+	vsel(x2AEA70D5, x3AF06A95, x606F30CF, x353A9A65);
+	vsel(x20CF7A9F, x2AEA70D5, x05CF0A9F, x0A3F0A6F);
+	vxor(x3CF19C86, x1C3EE619, x20CF7A9F);
+	vxor(x69A49C79, x555500FF, x3CF19C86);
 
-  vsel(x840DBB67, a5, x942D9A67, x86CD4C9B);
-  vsel(x6DA19C1E, x69A49C79, x3CF19C86, x840DBB67);
-  vnot(x925E63E1, x6DA19C1E);
-  vsel(x1, x925E63E1, x69A49C79, a6);
-  vxor(*out2, *out2, x1);
+	vsel(x840DBB67, a5, x942D9A67, x86CD4C9B);
+	vsel(x6DA19C1E, x69A49C79, x3CF19C86, x840DBB67);
+	vnot(x925E63E1, x6DA19C1E);
+	vsel(x1, x925E63E1, x69A49C79, a6);
+	vxor(*out2, *out2, x1);
 
-  vsel(x9C3CA761, x840DBB67, x1C3EE619, x3CF19C86);
-  vsel(x257A75D5, x455D45DF, x2AEA70D5, x606F30CF);
-  vxor(xB946D2B4, x9C3CA761, x257A75D5);
-  vsel(x2, x16E94A97, xB946D2B4, a6);
-  vxor(*out3, *out3, x2);
+	vsel(x9C3CA761, x840DBB67, x1C3EE619, x3CF19C86);
+	vsel(x257A75D5, x455D45DF, x2AEA70D5, x606F30CF);
+	vxor(xB946D2B4, x9C3CA761, x257A75D5);
+	vsel(x2, x16E94A97, xB946D2B4, a6);
+	vxor(*out3, *out3, x2);
 }
 
-static void
-s7(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, u32 a6,
-    u32 * out1, u32 * out2, u32 * out3, u32 * out4)
+static void s7 (const u32 a1, const u32 a2, const u32 a3, const u32 a4, const u32 a5, const u32 a6, u32 *out1, u32 *out2, u32 *out3, u32 *out4)
 {
-  u32 x44447777, x4B4B7878, x22772277, x0505F5F5, x220522F5, x694E5A8D;
-  u32 x00FFFF00, x66666666, x32353235, x26253636, x26DAC936;
-  u32 x738F9C63, x11EF9867, x26DA9867;
-  u32 x4B4B9C63, x4B666663, x4E639396;
-  u32 x4E4B393C, xFF00FF00, xFF05DD21, xB14EE41D;
-  u32 xD728827B, x6698807B, x699C585B;
-  u32 x738C847B, xA4A71E18, x74878E78;
-  u32 x333D9639, x74879639, x8B7869C6;
-  u32 x0, x1, x2, x3;
+	u32 x44447777, x4B4B7878, x22772277, x0505F5F5, x220522F5, x694E5A8D;
+	u32 x00FFFF00, x66666666, x32353235, x26253636, x26DAC936;
+	u32 x738F9C63, x11EF9867, x26DA9867;
+	u32 x4B4B9C63, x4B666663, x4E639396;
+	u32 x4E4B393C, xFF00FF00, xFF05DD21, xB14EE41D;
+	u32 xD728827B, x6698807B, x699C585B;
+	u32 x778A8877, xA4A71E18, x74878E78;
+	u32 x204A5845, x74879639, x8B7869C6;
+	u32 x0, x1, x2, x3;
 
-  vsel(x44447777, a2, a6, a3);
-  vxor(x4B4B7878, a4, x44447777);
-  vsel(x22772277, a3, a5, a2);
-  vsel(x0505F5F5, a6, a2, a4);
-  vsel(x220522F5, x22772277, x0505F5F5, a5);
-  vxor(x694E5A8D, x4B4B7878, x220522F5);
+	vsel(x44447777, a2, a6, a3);
+	vxor(x4B4B7878, a4, x44447777);
+	vsel(x22772277, a3, a5, a2);
+	vsel(x0505F5F5, a6, a2, a4);
+	vsel(x220522F5, x22772277, x0505F5F5, a5);
+	vxor(x694E5A8D, x4B4B7878, x220522F5);
 
-  vxor(x00FFFF00, a5, a6);
-  vxor(x66666666, a2, a3);
-  vsel(x32353235, a3, x220522F5, a4);
-  vsel(x26253636, x66666666, x32353235, x4B4B7878);
-  vxor(x26DAC936, x00FFFF00, x26253636);
-  vsel(x0, x26DAC936, x694E5A8D, a1);
-  vxor(*out1, *out1, x0);
+	vxor(x00FFFF00, a5, a6);
+	vxor(x66666666, a2, a3);
+	vsel(x32353235, a3, x220522F5, a4);
+	vsel(x26253636, x66666666, x32353235, x4B4B7878);
+	vxor(x26DAC936, x00FFFF00, x26253636);
+	vsel(x0, x26DAC936, x694E5A8D, a1);
+	vxor(*out1, *out1, x0);
 
-  vxor(x738F9C63, a2, x26DAC936);
-  vsel(x11EF9867, x738F9C63, a5, x66666666);
-  vsel(x26DA9867, x26DAC936, x11EF9867, a6);
+	vxor(x738F9C63, a2, x26DAC936);
+	vsel(x11EF9867, x738F9C63, a5, x66666666);
+	vsel(x26DA9867, x26DAC936, x11EF9867, a6);
 
-  vsel(x4B4B9C63, x4B4B7878, x738F9C63, a6);
-  vsel(x4B666663, x4B4B9C63, x66666666, x00FFFF00);
-  vxor(x4E639396, x0505F5F5, x4B666663);
+	vsel(x4B4B9C63, x4B4B7878, x738F9C63, a6);
+	vsel(x4B666663, x4B4B9C63, x66666666, x00FFFF00);
+	vxor(x4E639396, x0505F5F5, x4B666663);
 
-  vsel(x4E4B393C, x4B4B7878, x4E639396, a2);
-  vnot(xFF00FF00, a5);
-  vsel(xFF05DD21, xFF00FF00, x738F9C63, x32353235);
-  vxor(xB14EE41D, x4E4B393C, xFF05DD21);
-  vsel(x1, xB14EE41D, x26DA9867, a1);
-  vxor(*out2, *out2, x1);
+	vsel(x4E4B393C, x4B4B7878, x4E639396, a2);
+	vnot(xFF00FF00, a5);
+	vsel(xFF05DD21, xFF00FF00, x738F9C63, x32353235);
+	vxor(xB14EE41D, x4E4B393C, xFF05DD21);
+	vsel(x1, xB14EE41D, x26DA9867, a1);
+	vxor(*out2, *out2, x1);
 
-  vxor(xD728827B, x66666666, xB14EE41D);
-  vsel(x6698807B, x26DA9867, xD728827B, x4E4B393C);
-  vsel(x699C585B, x6698807B, x694E5A8D, xFF05DD21);
-  vsel(x2, x699C585B, x4E639396, a1);
-  vxor(*out3, *out3, x2);
+	vxor(xD728827B, x66666666, xB14EE41D);
+	vsel(x6698807B, x26DA9867, xD728827B, x4E4B393C);
+	vsel(x699C585B, x6698807B, x694E5A8D, xFF05DD21);
+	vsel(x2, x699C585B, x4E639396, a1);
+	vxor(*out3, *out3, x2);
 
-  vsel(x738C847B, x738F9C63, xD728827B, x4B4B7878);
-  vxor(xA4A71E18, x738F9C63, xD728827B);
-  vsel(x74878E78, x738C847B, xA4A71E18, a4);
+	vsel(x778A8877, x738F9C63, x26DAC936, x26253636);
+	vxor(xA4A71E18, x738F9C63, xD728827B);
+	vsel(x74878E78, x778A8877, xA4A71E18, a4);
 
-  vsel(x333D9639, x32353235, x738C847B, xB14EE41D);
-  vsel(x74879639, x74878E78, x333D9639, a6);
-  vnot(x8B7869C6, x74879639);
-  vsel(x3, x74878E78, x8B7869C6, a1);
-  vxor(*out4, *out4, x3);
+	vsel(x204A5845, x26DA9867, x694E5A8D, x26DAC936);
+	vsel(x74879639, x74878E78, a3, x204A5845);
+	vnot(x8B7869C6, x74879639);
+	vsel(x3, x74878E78, x8B7869C6, a1);
+	vxor(*out4, *out4, x3);
 }
 
-static void
-s8(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, u32 a6,
-    u32 * out1, u32 * out2, u32 * out3, u32 * out4)
+static void s8 (const u32 a1, const u32 a2, const u32 a3, const u32 a4, const u32 a5, const u32 a6, u32 *out1, u32 *out2, u32 *out3, u32 *out4)
 {
-  u32 x0505F5F5, x05FAF50A, x0F0F00FF, x22227777, x07DA807F, x34E9B34C;
-  u32 x00FFF00F, x0033FCCF, x5565B15C, x0C0C3F3F, x59698E63;
-  u32 x3001F74E, x30555745, x693CD926;
-  u32 x0C0CD926, x0C3F25E9, x38D696A5;
-  u32 xC729695A;
-  u32 x03D2117B, xC778395B, xCB471CB2;
-  u32 x5425B13F, x56B3803F, x919AE965;
-  u32 x17B3023F, x75555755, x62E6556A, xA59E6C31;
-  u32 x0, x1, x2, x3;
+	u32 x0505F5F5, x05FAF50A, x0F0F00FF, x22227777, x07DA807F, x34E9B34C;
+	u32 x00FFF00F, x0033FCCF, x5565B15C, x0C0C3F3F, x59698E63;
+	u32 x3001F74E, x30555745, x693CD926;
+	u32 x0C0CD926, x0C3F25E9, x38D696A5;
+	u32 xC729695A;
+	u32 x03D2117B, xC778395B, xCB471CB2;
+	u32 x5425B13F, x56B3803F, x919AE965;
+	u32 x17B3023F, x75555755, x62E6556A, xA59E6C31;
+	u32 x0, x1, x2, x3;
 
-  vsel(x0505F5F5, a5, a1, a3);
-  vxor(x05FAF50A, a4, x0505F5F5);
-  vsel(x0F0F00FF, a3, a4, a5);
-  vsel(x22227777, a2, a5, a1);
-  vsel(x07DA807F, x05FAF50A, x0F0F00FF, x22227777);
-  vxor(x34E9B34C, a2, x07DA807F);
+	vsel(x0505F5F5, a5, a1, a3);
+	vxor(x05FAF50A, a4, x0505F5F5);
+	vsel(x0F0F00FF, a3, a4, a5);
+	vsel(x22227777, a2, a5, a1);
+	vsel(x07DA807F, x05FAF50A, x0F0F00FF, x22227777);
+	vxor(x34E9B34C, a2, x07DA807F);
 
-  vsel(x00FFF00F, x05FAF50A, a4, a3);
-  vsel(x0033FCCF, a5, x00FFF00F, a2);
-  vsel(x5565B15C, a1, x34E9B34C, x0033FCCF);
-  vsel(x0C0C3F3F, a3, a5, a2);
-  vxor(x59698E63, x5565B15C, x0C0C3F3F);
+	vsel(x00FFF00F, x05FAF50A, a4, a3);
+	vsel(x0033FCCF, a5, x00FFF00F, a2);
+	vsel(x5565B15C, a1, x34E9B34C, x0033FCCF);
+	vsel(x0C0C3F3F, a3, a5, a2);
+	vxor(x59698E63, x5565B15C, x0C0C3F3F);
 
-  vsel(x3001F74E, x34E9B34C, a5, x05FAF50A);
-  vsel(x30555745, x3001F74E, a1, x00FFF00F);
-  vxor(x693CD926, x59698E63, x30555745);
-  vsel(x2, x693CD926, x59698E63, a6);
-  vxor(*out3, *out3, x2);
+	vsel(x3001F74E, x34E9B34C, a5, x05FAF50A);
+	vsel(x30555745, x3001F74E, a1, x00FFF00F);
+	vxor(x693CD926, x59698E63, x30555745);
+	vsel(x2, x693CD926, x59698E63, a6);
+	vxor(*out3, *out3, x2);
 
-  vsel(x0C0CD926, x0C0C3F3F, x693CD926, a5);
-  vxor(x0C3F25E9, x0033FCCF, x0C0CD926);
-  vxor(x38D696A5, x34E9B34C, x0C3F25E9);
+	vsel(x0C0CD926, x0C0C3F3F, x693CD926, a5);
+	vxor(x0C3F25E9, x0033FCCF, x0C0CD926);
+	vxor(x38D696A5, x34E9B34C, x0C3F25E9);
 
-  vnot(xC729695A, x38D696A5);
+	vnot(xC729695A, x38D696A5);
 
-  vsel(x03D2117B, x07DA807F, a2, x0C0CD926);
-  vsel(xC778395B, xC729695A, x03D2117B, x30555745);
-  vxor(xCB471CB2, x0C3F25E9, xC778395B);
-  vsel(x1, xCB471CB2, x34E9B34C, a6);
-  vxor(*out2, *out2, x1);
+	vsel(x03D2117B, x07DA807F, a2, x0C0CD926);
+	vsel(xC778395B, xC729695A, x03D2117B, x30555745);
+	vxor(xCB471CB2, x0C3F25E9, xC778395B);
+	vsel(x1, xCB471CB2, x34E9B34C, a6);
+	vxor(*out2, *out2, x1);
 
-  vsel(x5425B13F, x5565B15C, x0C0C3F3F, x03D2117B);
-  vsel(x56B3803F, x07DA807F, x5425B13F, x59698E63);
-  vxor(x919AE965, xC729695A, x56B3803F);
-  vsel(x3, xC729695A, x919AE965, a6);
-  vxor(*out4, *out4, x3);
+	vsel(x5425B13F, x5565B15C, x0C0C3F3F, x03D2117B);
+	vsel(x56B3803F, x07DA807F, x5425B13F, x59698E63);
+	vxor(x919AE965, xC729695A, x56B3803F);
+	vsel(x3, xC729695A, x919AE965, a6);
+	vxor(*out4, *out4, x3);
 
-  vsel(x17B3023F, x07DA807F, a2, x59698E63);
-  vor(x75555755, a1, x30555745);
-  vxor(x62E6556A, x17B3023F, x75555755);
-  vxor(xA59E6C31, xC778395B, x62E6556A);
-  vsel(x0, xA59E6C31, x38D696A5, a6);
-  vxor(*out1, *out1, x0);
+	vsel(x17B3023F, x07DA807F, a2, x59698E63);
+	vor(x75555755, a1, x30555745);
+	vxor(x62E6556A, x17B3023F, x75555755);
+	vxor(xA59E6C31, xC778395B, x62E6556A);
+	vsel(x0, xA59E6C31, x38D696A5, a6);
+	vxor(*out1, *out1, x0);
 }
+
 #endif
 
 #define SWAP(a, b) { u32 tmp=*a;*a=*b;*b=tmp; }
@@ -1477,21 +1454,63 @@ static void DES (const u32 K00, const u32 K01, const u32 K02, const u32 K03, con
   KXX_DECL u32 k36, k37, k38, k39, k40, k41;
   KXX_DECL u32 k42, k43, k44, k45, k46, k47;
 
-  #ifdef IS_NV
-  #if CUDA_ARCH >= 500
-  #else
+  #if defined IS_AMD || defined IS_GENERIC
+
+  #ifdef _unroll
   #pragma unroll
   #endif
+  for (u32 i = 0; i < 8; i++)
+  {
+    switch (i)
+    {
+      case 0: KEYSET00; break;
+      case 1: KEYSET02; break;
+      case 2: KEYSET04; break;
+      case 3: KEYSET06; break;
+      case 4: KEYSET10; break;
+      case 5: KEYSET12; break;
+      case 6: KEYSET14; break;
+      case 7: KEYSET16; break;
+    }
+
+    s1(*D63 ^ k00, *D32 ^ k01, *D33 ^ k02, *D34 ^ k03, *D35 ^ k04, *D36 ^ k05, D08, D16, D22, D30);
+    s2(*D35 ^ k06, *D36 ^ k07, *D37 ^ k08, *D38 ^ k09, *D39 ^ k10, *D40 ^ k11, D12, D27, D01, D17);
+    s3(*D39 ^ k12, *D40 ^ k13, *D41 ^ k14, *D42 ^ k15, *D43 ^ k16, *D44 ^ k17, D23, D15, D29, D05);
+    s4(*D43 ^ k18, *D44 ^ k19, *D45 ^ k20, *D46 ^ k21, *D47 ^ k22, *D48 ^ k23, D25, D19, D09, D00);
+    s5(*D47 ^ k24, *D48 ^ k25, *D49 ^ k26, *D50 ^ k27, *D51 ^ k28, *D52 ^ k29, D07, D13, D24, D02);
+    s6(*D51 ^ k30, *D52 ^ k31, *D53 ^ k32, *D54 ^ k33, *D55 ^ k34, *D56 ^ k35, D03, D28, D10, D18);
+    s7(*D55 ^ k36, *D56 ^ k37, *D57 ^ k38, *D58 ^ k39, *D59 ^ k40, *D60 ^ k41, D31, D11, D21, D06);
+    s8(*D59 ^ k42, *D60 ^ k43, *D61 ^ k44, *D62 ^ k45, *D63 ^ k46, *D32 ^ k47, D04, D26, D14, D20);
+
+    switch (i)
+    {
+      case 0: KEYSET01; break;
+      case 1: KEYSET03; break;
+      case 2: KEYSET05; break;
+      case 3: KEYSET07; break;
+      case 4: KEYSET11; break;
+      case 5: KEYSET13; break;
+      case 6: KEYSET15; break;
+      case 7: KEYSET17; break;
+    }
+
+    s1(*D31 ^ k00, *D00 ^ k01, *D01 ^ k02, *D02 ^ k03, *D03 ^ k04, *D04 ^ k05, D40, D48, D54, D62);
+    s2(*D03 ^ k06, *D04 ^ k07, *D05 ^ k08, *D06 ^ k09, *D07 ^ k10, *D08 ^ k11, D44, D59, D33, D49);
+    s3(*D07 ^ k12, *D08 ^ k13, *D09 ^ k14, *D10 ^ k15, *D11 ^ k16, *D12 ^ k17, D55, D47, D61, D37);
+    s4(*D11 ^ k18, *D12 ^ k19, *D13 ^ k20, *D14 ^ k21, *D15 ^ k22, *D16 ^ k23, D57, D51, D41, D32);
+    s5(*D15 ^ k24, *D16 ^ k25, *D17 ^ k26, *D18 ^ k27, *D19 ^ k28, *D20 ^ k29, D39, D45, D56, D34);
+    s6(*D19 ^ k30, *D20 ^ k31, *D21 ^ k32, *D22 ^ k33, *D23 ^ k34, *D24 ^ k35, D35, D60, D42, D50);
+    s7(*D23 ^ k36, *D24 ^ k37, *D25 ^ k38, *D26 ^ k39, *D27 ^ k40, *D28 ^ k41, D63, D43, D53, D38);
+    s8(*D27 ^ k42, *D28 ^ k43, *D29 ^ k44, *D30 ^ k45, *D31 ^ k46, *D00 ^ k47, D36, D58, D46, D52);
+  }
+
   #endif
 
-  #ifdef IS_AMD
+  #if defined IS_NV
+
+  #ifdef _unroll
   #pragma unroll
   #endif
-
-  #ifdef IS_GENERIC
-  #pragma unroll 1
-  #endif
-
   for (u32 i = 0; i < 2; i++)
   {
     if (i) KEYSET10 else KEYSET00
@@ -1582,6 +1601,8 @@ static void DES (const u32 K00, const u32 K01, const u32 K02, const u32 K03, con
     s7(*D23 ^ k36, *D24 ^ k37, *D25 ^ k38, *D26 ^ k39, *D27 ^ k40, *D28 ^ k41, D63, D43, D53, D38);
     s8(*D27 ^ k42, *D28 ^ k43, *D29 ^ k44, *D30 ^ k45, *D31 ^ k46, *D00 ^ k47, D36, D58, D46, D52);
   }
+
+  #endif
 }
 
 static void transpose32c (u32 data[32])
@@ -1675,7 +1696,7 @@ static void transpose32c (u32 data[32])
   swap (data[30], data[31],  1, 0x55555555);
 }
 
-static void m03000m (__local u32 *s_S, __global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset)
+static void m03000m (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset)
 {
   /**
    * base
@@ -1685,65 +1706,72 @@ static void m03000m (__local u32 *s_S, __global pw_t *pws, __global kernel_rule_
   const u32 lid = get_local_id (0);
 
   /**
-   * keys
+   * base
    */
 
-  const u32 K00 = pws[gid].i[ 0];
-  const u32 K01 = pws[gid].i[ 1];
-  const u32 K02 = pws[gid].i[ 2];
-  const u32 K03 = pws[gid].i[ 3];
-  const u32 K04 = pws[gid].i[ 4];
-  const u32 K05 = pws[gid].i[ 5];
-  const u32 K06 = pws[gid].i[ 6];
-  const u32 K07 = pws[gid].i[ 7];
-  const u32 K08 = pws[gid].i[ 8];
-  const u32 K09 = pws[gid].i[ 9];
-  const u32 K10 = pws[gid].i[10];
-  const u32 K11 = pws[gid].i[11];
-  const u32 K12 = pws[gid].i[12];
-  const u32 K13 = pws[gid].i[13];
-  const u32 K14 = pws[gid].i[14];
-  const u32 K15 = pws[gid].i[15];
-  const u32 K16 = pws[gid].i[16];
-  const u32 K17 = pws[gid].i[17];
-  const u32 K18 = pws[gid].i[18];
-  const u32 K19 = pws[gid].i[19];
-  const u32 K20 = pws[gid].i[20];
-  const u32 K21 = pws[gid].i[21];
-  const u32 K22 = pws[gid].i[22];
-  const u32 K23 = pws[gid].i[23];
-  const u32 K24 = pws[gid].i[24];
-  const u32 K25 = pws[gid].i[25];
-  const u32 K26 = pws[gid].i[26];
-  const u32 K27 = pws[gid].i[27];
-  const u32 K28 = pws[gid].i[28];
-  const u32 K29 = pws[gid].i[29];
-  const u32 K30 = pws[gid].i[30];
-  const u32 K31 = pws[gid].i[31];
-  const u32 K32 = pws[gid].i[32];
-  const u32 K33 = pws[gid].i[33];
-  const u32 K34 = pws[gid].i[34];
-  const u32 K35 = pws[gid].i[35];
-  const u32 K36 = pws[gid].i[36];
-  const u32 K37 = pws[gid].i[37];
-  const u32 K38 = pws[gid].i[38];
-  const u32 K39 = pws[gid].i[39];
-  const u32 K40 = pws[gid].i[40];
-  const u32 K41 = pws[gid].i[41];
-  const u32 K42 = pws[gid].i[42];
-  const u32 K43 = pws[gid].i[43];
-  const u32 K44 = pws[gid].i[44];
-  const u32 K45 = pws[gid].i[45];
-  const u32 K46 = pws[gid].i[46];
-  const u32 K47 = pws[gid].i[47];
-  const u32 K48 = pws[gid].i[48];
-  const u32 K49 = pws[gid].i[49];
-  const u32 K50 = pws[gid].i[50];
-  const u32 K51 = pws[gid].i[51];
-  const u32 K52 = pws[gid].i[52];
-  const u32 K53 = pws[gid].i[53];
-  const u32 K54 = pws[gid].i[54];
-  const u32 K55 = pws[gid].i[55];
+  const u32 w0s = pws[gid].i[0];
+  const u32 w1s = pws[gid].i[1];
+
+  #define K00 (((w0s >> ( 0 + 7)) & 1) ? -1 : 0)
+  #define K01 (((w0s >> ( 0 + 6)) & 1) ? -1 : 0)
+  #define K02 (((w0s >> ( 0 + 5)) & 1) ? -1 : 0)
+  #define K03 (((w0s >> ( 0 + 4)) & 1) ? -1 : 0)
+  #define K04 (((w0s >> ( 0 + 3)) & 1) ? -1 : 0)
+  #define K05 (((w0s >> ( 0 + 2)) & 1) ? -1 : 0)
+  #define K06 (((w0s >> ( 0 + 1)) & 1) ? -1 : 0)
+  #define K07 (((w0s >> ( 0 + 0)) & 1) ? -1 : 0)
+  #define K08 (((w0s >> ( 8 + 7)) & 1) ? -1 : 0)
+  #define K09 (((w0s >> ( 8 + 6)) & 1) ? -1 : 0)
+  #define K10 (((w0s >> ( 8 + 5)) & 1) ? -1 : 0)
+  #define K11 (((w0s >> ( 8 + 4)) & 1) ? -1 : 0)
+  #define K12 (((w0s >> ( 8 + 3)) & 1) ? -1 : 0)
+  #define K13 (((w0s >> ( 8 + 2)) & 1) ? -1 : 0)
+  #define K14 (((w0s >> ( 8 + 1)) & 1) ? -1 : 0)
+  #define K15 (((w0s >> ( 8 + 0)) & 1) ? -1 : 0)
+  #define K16 (((w0s >> (16 + 7)) & 1) ? -1 : 0)
+  #define K17 (((w0s >> (16 + 6)) & 1) ? -1 : 0)
+  #define K18 (((w0s >> (16 + 5)) & 1) ? -1 : 0)
+  #define K19 (((w0s >> (16 + 4)) & 1) ? -1 : 0)
+  #define K20 (((w0s >> (16 + 3)) & 1) ? -1 : 0)
+  #define K21 (((w0s >> (16 + 2)) & 1) ? -1 : 0)
+  #define K22 (((w0s >> (16 + 1)) & 1) ? -1 : 0)
+  #define K23 (((w0s >> (16 + 0)) & 1) ? -1 : 0)
+  #define K24 (((w0s >> (24 + 7)) & 1) ? -1 : 0)
+  #define K25 (((w0s >> (24 + 6)) & 1) ? -1 : 0)
+  #define K26 (((w0s >> (24 + 5)) & 1) ? -1 : 0)
+  #define K27 (((w0s >> (24 + 4)) & 1) ? -1 : 0)
+  #define K28 (((w0s >> (24 + 3)) & 1) ? -1 : 0)
+  #define K29 (((w0s >> (24 + 2)) & 1) ? -1 : 0)
+  #define K30 (((w0s >> (24 + 1)) & 1) ? -1 : 0)
+  #define K31 (((w0s >> (24 + 0)) & 1) ? -1 : 0)
+  #define K32 (((w1s >> ( 0 + 7)) & 1) ? -1 : 0)
+  #define K33 (((w1s >> ( 0 + 6)) & 1) ? -1 : 0)
+  #define K34 (((w1s >> ( 0 + 5)) & 1) ? -1 : 0)
+  #define K35 (((w1s >> ( 0 + 4)) & 1) ? -1 : 0)
+  #define K36 (((w1s >> ( 0 + 3)) & 1) ? -1 : 0)
+  #define K37 (((w1s >> ( 0 + 2)) & 1) ? -1 : 0)
+  #define K38 (((w1s >> ( 0 + 1)) & 1) ? -1 : 0)
+  #define K39 (((w1s >> ( 0 + 0)) & 1) ? -1 : 0)
+  #define K40 (((w1s >> ( 8 + 7)) & 1) ? -1 : 0)
+  #define K41 (((w1s >> ( 8 + 6)) & 1) ? -1 : 0)
+  #define K42 (((w1s >> ( 8 + 5)) & 1) ? -1 : 0)
+  #define K43 (((w1s >> ( 8 + 4)) & 1) ? -1 : 0)
+  #define K44 (((w1s >> ( 8 + 3)) & 1) ? -1 : 0)
+  #define K45 (((w1s >> ( 8 + 2)) & 1) ? -1 : 0)
+  #define K46 (((w1s >> ( 8 + 1)) & 1) ? -1 : 0)
+  #define K47 (((w1s >> ( 8 + 0)) & 1) ? -1 : 0)
+  #define K48 (((w1s >> (16 + 7)) & 1) ? -1 : 0)
+  #define K49 (((w1s >> (16 + 6)) & 1) ? -1 : 0)
+  #define K50 (((w1s >> (16 + 5)) & 1) ? -1 : 0)
+  #define K51 (((w1s >> (16 + 4)) & 1) ? -1 : 0)
+  #define K52 (((w1s >> (16 + 3)) & 1) ? -1 : 0)
+  #define K53 (((w1s >> (16 + 2)) & 1) ? -1 : 0)
+  #define K54 (((w1s >> (16 + 1)) & 1) ? -1 : 0)
+  #define K55 (((w1s >> (16 + 0)) & 1) ? -1 : 0)
+
+  /**
+   * inner loop
+   */
 
   const u32 pc_pos = get_local_id (1);
 
@@ -1984,7 +2012,9 @@ static void m03000m (__local u32 *s_S, __global pw_t *pws, __global kernel_rule_
 
       u32 tmpResult = 0;
 
+      #ifdef _unroll
       #pragma unroll
+      #endif
       for (int i = 0; i < 32; i++)
       {
         const u32 b0 = -((search[0] >> i) & 1);
@@ -1996,7 +2026,7 @@ static void m03000m (__local u32 *s_S, __global pw_t *pws, __global kernel_rule_
 
       if (tmpResult == 0xffffffff) continue;
 
-      const u32 slice = 31 - clz (~tmpResult);
+      const u32 slice = ffz (tmpResult);
 
       const u32 r0 = search[0];
       const u32 r1 = search[1];
@@ -2011,7 +2041,9 @@ static void m03000m (__local u32 *s_S, __global pw_t *pws, __global kernel_rule_
     u32 out0[32];
     u32 out1[32];
 
+    #ifdef _unroll
     #pragma unroll
+    #endif
     for (int i = 0; i < 32; i++)
     {
       out0[i] = out[ 0 + 31 - i];
@@ -2021,7 +2053,9 @@ static void m03000m (__local u32 *s_S, __global pw_t *pws, __global kernel_rule_
     transpose32c (out0);
     transpose32c (out1);
 
+    #ifdef _unroll
     #pragma unroll
+    #endif
     for (int slice = 0; slice < 32; slice++)
     {
       const u32 r0 = out0[31 - slice];
@@ -2034,7 +2068,7 @@ static void m03000m (__local u32 *s_S, __global pw_t *pws, __global kernel_rule_
   }
 }
 
-static void m03000s (__local u32 *s_S, __global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset)
+static void m03000s (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset)
 {
   /**
    * base
@@ -2047,131 +2081,141 @@ static void m03000s (__local u32 *s_S, __global pw_t *pws, __global kernel_rule_
    * digest
    */
 
-  #define S00 s_S[ 0]
-  #define S01 s_S[ 1]
-  #define S02 s_S[ 2]
-  #define S03 s_S[ 3]
-  #define S04 s_S[ 4]
-  #define S05 s_S[ 5]
-  #define S06 s_S[ 6]
-  #define S07 s_S[ 7]
-  #define S08 s_S[ 8]
-  #define S09 s_S[ 9]
-  #define S10 s_S[10]
-  #define S11 s_S[11]
-  #define S12 s_S[12]
-  #define S13 s_S[13]
-  #define S14 s_S[14]
-  #define S15 s_S[15]
-  #define S16 s_S[16]
-  #define S17 s_S[17]
-  #define S18 s_S[18]
-  #define S19 s_S[19]
-  #define S20 s_S[20]
-  #define S21 s_S[21]
-  #define S22 s_S[22]
-  #define S23 s_S[23]
-  #define S24 s_S[24]
-  #define S25 s_S[25]
-  #define S26 s_S[26]
-  #define S27 s_S[27]
-  #define S28 s_S[28]
-  #define S29 s_S[29]
-  #define S30 s_S[30]
-  #define S31 s_S[31]
-  #define S32 s_S[32]
-  #define S33 s_S[33]
-  #define S34 s_S[34]
-  #define S35 s_S[35]
-  #define S36 s_S[36]
-  #define S37 s_S[37]
-  #define S38 s_S[38]
-  #define S39 s_S[39]
-  #define S40 s_S[40]
-  #define S41 s_S[41]
-  #define S42 s_S[42]
-  #define S43 s_S[43]
-  #define S44 s_S[44]
-  #define S45 s_S[45]
-  #define S46 s_S[46]
-  #define S47 s_S[47]
-  #define S48 s_S[48]
-  #define S49 s_S[49]
-  #define S50 s_S[50]
-  #define S51 s_S[51]
-  #define S52 s_S[52]
-  #define S53 s_S[53]
-  #define S54 s_S[54]
-  #define S55 s_S[55]
-  #define S56 s_S[56]
-  #define S57 s_S[57]
-  #define S58 s_S[58]
-  #define S59 s_S[59]
-  #define S60 s_S[60]
-  #define S61 s_S[61]
-  #define S62 s_S[62]
-  #define S63 s_S[63]
+  const u32 s0 = digests_buf[0].digest_buf[0];
+  const u32 s1 = digests_buf[0].digest_buf[1];
+
+  #define S00 (((s0 >>  0) & 1) ? -1 : 0)
+  #define S01 (((s0 >>  1) & 1) ? -1 : 0)
+  #define S02 (((s0 >>  2) & 1) ? -1 : 0)
+  #define S03 (((s0 >>  3) & 1) ? -1 : 0)
+  #define S04 (((s0 >>  4) & 1) ? -1 : 0)
+  #define S05 (((s0 >>  5) & 1) ? -1 : 0)
+  #define S06 (((s0 >>  6) & 1) ? -1 : 0)
+  #define S07 (((s0 >>  7) & 1) ? -1 : 0)
+  #define S08 (((s0 >>  8) & 1) ? -1 : 0)
+  #define S09 (((s0 >>  9) & 1) ? -1 : 0)
+  #define S10 (((s0 >> 10) & 1) ? -1 : 0)
+  #define S11 (((s0 >> 11) & 1) ? -1 : 0)
+  #define S12 (((s0 >> 12) & 1) ? -1 : 0)
+  #define S13 (((s0 >> 13) & 1) ? -1 : 0)
+  #define S14 (((s0 >> 14) & 1) ? -1 : 0)
+  #define S15 (((s0 >> 15) & 1) ? -1 : 0)
+  #define S16 (((s0 >> 16) & 1) ? -1 : 0)
+  #define S17 (((s0 >> 17) & 1) ? -1 : 0)
+  #define S18 (((s0 >> 18) & 1) ? -1 : 0)
+  #define S19 (((s0 >> 19) & 1) ? -1 : 0)
+  #define S20 (((s0 >> 20) & 1) ? -1 : 0)
+  #define S21 (((s0 >> 21) & 1) ? -1 : 0)
+  #define S22 (((s0 >> 22) & 1) ? -1 : 0)
+  #define S23 (((s0 >> 23) & 1) ? -1 : 0)
+  #define S24 (((s0 >> 24) & 1) ? -1 : 0)
+  #define S25 (((s0 >> 25) & 1) ? -1 : 0)
+  #define S26 (((s0 >> 26) & 1) ? -1 : 0)
+  #define S27 (((s0 >> 27) & 1) ? -1 : 0)
+  #define S28 (((s0 >> 28) & 1) ? -1 : 0)
+  #define S29 (((s0 >> 29) & 1) ? -1 : 0)
+  #define S30 (((s0 >> 30) & 1) ? -1 : 0)
+  #define S31 (((s0 >> 31) & 1) ? -1 : 0)
+  #define S32 (((s1 >>  0) & 1) ? -1 : 0)
+  #define S33 (((s1 >>  1) & 1) ? -1 : 0)
+  #define S34 (((s1 >>  2) & 1) ? -1 : 0)
+  #define S35 (((s1 >>  3) & 1) ? -1 : 0)
+  #define S36 (((s1 >>  4) & 1) ? -1 : 0)
+  #define S37 (((s1 >>  5) & 1) ? -1 : 0)
+  #define S38 (((s1 >>  6) & 1) ? -1 : 0)
+  #define S39 (((s1 >>  7) & 1) ? -1 : 0)
+  #define S40 (((s1 >>  8) & 1) ? -1 : 0)
+  #define S41 (((s1 >>  9) & 1) ? -1 : 0)
+  #define S42 (((s1 >> 10) & 1) ? -1 : 0)
+  #define S43 (((s1 >> 11) & 1) ? -1 : 0)
+  #define S44 (((s1 >> 12) & 1) ? -1 : 0)
+  #define S45 (((s1 >> 13) & 1) ? -1 : 0)
+  #define S46 (((s1 >> 14) & 1) ? -1 : 0)
+  #define S47 (((s1 >> 15) & 1) ? -1 : 0)
+  #define S48 (((s1 >> 16) & 1) ? -1 : 0)
+  #define S49 (((s1 >> 17) & 1) ? -1 : 0)
+  #define S50 (((s1 >> 18) & 1) ? -1 : 0)
+  #define S51 (((s1 >> 19) & 1) ? -1 : 0)
+  #define S52 (((s1 >> 20) & 1) ? -1 : 0)
+  #define S53 (((s1 >> 21) & 1) ? -1 : 0)
+  #define S54 (((s1 >> 22) & 1) ? -1 : 0)
+  #define S55 (((s1 >> 23) & 1) ? -1 : 0)
+  #define S56 (((s1 >> 24) & 1) ? -1 : 0)
+  #define S57 (((s1 >> 25) & 1) ? -1 : 0)
+  #define S58 (((s1 >> 26) & 1) ? -1 : 0)
+  #define S59 (((s1 >> 27) & 1) ? -1 : 0)
+  #define S60 (((s1 >> 28) & 1) ? -1 : 0)
+  #define S61 (((s1 >> 29) & 1) ? -1 : 0)
+  #define S62 (((s1 >> 30) & 1) ? -1 : 0)
+  #define S63 (((s1 >> 31) & 1) ? -1 : 0)
 
   /**
-   * keys
+   * base
    */
 
-  const u32 K00 = pws[gid].i[ 0];
-  const u32 K01 = pws[gid].i[ 1];
-  const u32 K02 = pws[gid].i[ 2];
-  const u32 K03 = pws[gid].i[ 3];
-  const u32 K04 = pws[gid].i[ 4];
-  const u32 K05 = pws[gid].i[ 5];
-  const u32 K06 = pws[gid].i[ 6];
-  const u32 K07 = pws[gid].i[ 7];
-  const u32 K08 = pws[gid].i[ 8];
-  const u32 K09 = pws[gid].i[ 9];
-  const u32 K10 = pws[gid].i[10];
-  const u32 K11 = pws[gid].i[11];
-  const u32 K12 = pws[gid].i[12];
-  const u32 K13 = pws[gid].i[13];
-  const u32 K14 = pws[gid].i[14];
-  const u32 K15 = pws[gid].i[15];
-  const u32 K16 = pws[gid].i[16];
-  const u32 K17 = pws[gid].i[17];
-  const u32 K18 = pws[gid].i[18];
-  const u32 K19 = pws[gid].i[19];
-  const u32 K20 = pws[gid].i[20];
-  const u32 K21 = pws[gid].i[21];
-  const u32 K22 = pws[gid].i[22];
-  const u32 K23 = pws[gid].i[23];
-  const u32 K24 = pws[gid].i[24];
-  const u32 K25 = pws[gid].i[25];
-  const u32 K26 = pws[gid].i[26];
-  const u32 K27 = pws[gid].i[27];
-  const u32 K28 = pws[gid].i[28];
-  const u32 K29 = pws[gid].i[29];
-  const u32 K30 = pws[gid].i[30];
-  const u32 K31 = pws[gid].i[31];
-  const u32 K32 = pws[gid].i[32];
-  const u32 K33 = pws[gid].i[33];
-  const u32 K34 = pws[gid].i[34];
-  const u32 K35 = pws[gid].i[35];
-  const u32 K36 = pws[gid].i[36];
-  const u32 K37 = pws[gid].i[37];
-  const u32 K38 = pws[gid].i[38];
-  const u32 K39 = pws[gid].i[39];
-  const u32 K40 = pws[gid].i[40];
-  const u32 K41 = pws[gid].i[41];
-  const u32 K42 = pws[gid].i[42];
-  const u32 K43 = pws[gid].i[43];
-  const u32 K44 = pws[gid].i[44];
-  const u32 K45 = pws[gid].i[45];
-  const u32 K46 = pws[gid].i[46];
-  const u32 K47 = pws[gid].i[47];
-  const u32 K48 = pws[gid].i[48];
-  const u32 K49 = pws[gid].i[49];
-  const u32 K50 = pws[gid].i[50];
-  const u32 K51 = pws[gid].i[51];
-  const u32 K52 = pws[gid].i[52];
-  const u32 K53 = pws[gid].i[53];
-  const u32 K54 = pws[gid].i[54];
-  const u32 K55 = pws[gid].i[55];
+  const u32 w0s = pws[gid].i[0];
+  const u32 w1s = pws[gid].i[1];
+
+  #define K00 (((w0s >> ( 0 + 7)) & 1) ? -1 : 0)
+  #define K01 (((w0s >> ( 0 + 6)) & 1) ? -1 : 0)
+  #define K02 (((w0s >> ( 0 + 5)) & 1) ? -1 : 0)
+  #define K03 (((w0s >> ( 0 + 4)) & 1) ? -1 : 0)
+  #define K04 (((w0s >> ( 0 + 3)) & 1) ? -1 : 0)
+  #define K05 (((w0s >> ( 0 + 2)) & 1) ? -1 : 0)
+  #define K06 (((w0s >> ( 0 + 1)) & 1) ? -1 : 0)
+  #define K07 (((w0s >> ( 0 + 0)) & 1) ? -1 : 0)
+  #define K08 (((w0s >> ( 8 + 7)) & 1) ? -1 : 0)
+  #define K09 (((w0s >> ( 8 + 6)) & 1) ? -1 : 0)
+  #define K10 (((w0s >> ( 8 + 5)) & 1) ? -1 : 0)
+  #define K11 (((w0s >> ( 8 + 4)) & 1) ? -1 : 0)
+  #define K12 (((w0s >> ( 8 + 3)) & 1) ? -1 : 0)
+  #define K13 (((w0s >> ( 8 + 2)) & 1) ? -1 : 0)
+  #define K14 (((w0s >> ( 8 + 1)) & 1) ? -1 : 0)
+  #define K15 (((w0s >> ( 8 + 0)) & 1) ? -1 : 0)
+  #define K16 (((w0s >> (16 + 7)) & 1) ? -1 : 0)
+  #define K17 (((w0s >> (16 + 6)) & 1) ? -1 : 0)
+  #define K18 (((w0s >> (16 + 5)) & 1) ? -1 : 0)
+  #define K19 (((w0s >> (16 + 4)) & 1) ? -1 : 0)
+  #define K20 (((w0s >> (16 + 3)) & 1) ? -1 : 0)
+  #define K21 (((w0s >> (16 + 2)) & 1) ? -1 : 0)
+  #define K22 (((w0s >> (16 + 1)) & 1) ? -1 : 0)
+  #define K23 (((w0s >> (16 + 0)) & 1) ? -1 : 0)
+  #define K24 (((w0s >> (24 + 7)) & 1) ? -1 : 0)
+  #define K25 (((w0s >> (24 + 6)) & 1) ? -1 : 0)
+  #define K26 (((w0s >> (24 + 5)) & 1) ? -1 : 0)
+  #define K27 (((w0s >> (24 + 4)) & 1) ? -1 : 0)
+  #define K28 (((w0s >> (24 + 3)) & 1) ? -1 : 0)
+  #define K29 (((w0s >> (24 + 2)) & 1) ? -1 : 0)
+  #define K30 (((w0s >> (24 + 1)) & 1) ? -1 : 0)
+  #define K31 (((w0s >> (24 + 0)) & 1) ? -1 : 0)
+  #define K32 (((w1s >> ( 0 + 7)) & 1) ? -1 : 0)
+  #define K33 (((w1s >> ( 0 + 6)) & 1) ? -1 : 0)
+  #define K34 (((w1s >> ( 0 + 5)) & 1) ? -1 : 0)
+  #define K35 (((w1s >> ( 0 + 4)) & 1) ? -1 : 0)
+  #define K36 (((w1s >> ( 0 + 3)) & 1) ? -1 : 0)
+  #define K37 (((w1s >> ( 0 + 2)) & 1) ? -1 : 0)
+  #define K38 (((w1s >> ( 0 + 1)) & 1) ? -1 : 0)
+  #define K39 (((w1s >> ( 0 + 0)) & 1) ? -1 : 0)
+  #define K40 (((w1s >> ( 8 + 7)) & 1) ? -1 : 0)
+  #define K41 (((w1s >> ( 8 + 6)) & 1) ? -1 : 0)
+  #define K42 (((w1s >> ( 8 + 5)) & 1) ? -1 : 0)
+  #define K43 (((w1s >> ( 8 + 4)) & 1) ? -1 : 0)
+  #define K44 (((w1s >> ( 8 + 3)) & 1) ? -1 : 0)
+  #define K45 (((w1s >> ( 8 + 2)) & 1) ? -1 : 0)
+  #define K46 (((w1s >> ( 8 + 1)) & 1) ? -1 : 0)
+  #define K47 (((w1s >> ( 8 + 0)) & 1) ? -1 : 0)
+  #define K48 (((w1s >> (16 + 7)) & 1) ? -1 : 0)
+  #define K49 (((w1s >> (16 + 6)) & 1) ? -1 : 0)
+  #define K50 (((w1s >> (16 + 5)) & 1) ? -1 : 0)
+  #define K51 (((w1s >> (16 + 4)) & 1) ? -1 : 0)
+  #define K52 (((w1s >> (16 + 3)) & 1) ? -1 : 0)
+  #define K53 (((w1s >> (16 + 2)) & 1) ? -1 : 0)
+  #define K54 (((w1s >> (16 + 1)) & 1) ? -1 : 0)
+  #define K55 (((w1s >> (16 + 0)) & 1) ? -1 : 0)
+
+  /**
+   * inner loop
+   */
 
   const u32 pc_pos = get_local_id (1);
 
@@ -2408,51 +2452,16 @@ static void m03000s (__local u32 *s_S, __global pw_t *pws, __global kernel_rule_
 
   if (tmpResult == 0xffffffff) return;
 
-  const u32 slice = 31 - clz (~tmpResult);
+  const u32 slice = ffz (tmpResult);
 
   #include COMPARE_S
 }
 
 //
-// transpose bitslice base : easy because no overlapping buffers
-//                    mod  : attention race conditions, need different buffers for *in and *out
+// transpose bitslice mod  : attention race conditions, need different buffers for *in and *out
 //
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m03000_tb (__global pw_t *pws)
-{
-  const u32 gid = get_global_id (0);
-
-  const u32 w0s = pws[gid].i[0];
-  const u32 w1s = pws[gid].i[1];
-
-  #pragma unroll
-  for (int i = 0; i < 32; i += 8)
-  {
-    pws[gid].i[i +  0 + 0] = -((w0s >> (i + 7)) & 1);
-    pws[gid].i[i +  0 + 1] = -((w0s >> (i + 6)) & 1);
-    pws[gid].i[i +  0 + 2] = -((w0s >> (i + 5)) & 1);
-    pws[gid].i[i +  0 + 3] = -((w0s >> (i + 4)) & 1);
-    pws[gid].i[i +  0 + 4] = -((w0s >> (i + 3)) & 1);
-    pws[gid].i[i +  0 + 5] = -((w0s >> (i + 2)) & 1);
-    pws[gid].i[i +  0 + 6] = -((w0s >> (i + 1)) & 1);
-    pws[gid].i[i +  0 + 7] = -((w0s >> (i + 0)) & 1);
-  }
-
-  #pragma unroll
-  for (int i = 0; i < 24; i += 8)
-  {
-    pws[gid].i[i + 32 + 0] = -((w1s >> (i + 7)) & 1);
-    pws[gid].i[i + 32 + 1] = -((w1s >> (i + 6)) & 1);
-    pws[gid].i[i + 32 + 2] = -((w1s >> (i + 5)) & 1);
-    pws[gid].i[i + 32 + 3] = -((w1s >> (i + 4)) & 1);
-    pws[gid].i[i + 32 + 4] = -((w1s >> (i + 3)) & 1);
-    pws[gid].i[i + 32 + 5] = -((w1s >> (i + 2)) & 1);
-    pws[gid].i[i + 32 + 6] = -((w1s >> (i + 1)) & 1);
-    pws[gid].i[i + 32 + 7] = -((w1s >> (i + 0)) & 1);
-  }
-}
-
-__kernel void __attribute__((reqd_work_group_size (32, 1, 1))) m03000_tm (__global u32 *mod, __global bs_word_t *words_buf_r)
+__kernel void m03000_tm (__global u32 *mod, __global bs_word_t *words_buf_r)
 {
   const u32 gid = get_global_id (0);
 
@@ -2461,7 +2470,6 @@ __kernel void __attribute__((reqd_work_group_size (32, 1, 1))) m03000_tm (__glob
 
   const u32 w0 = mod[gid];
 
-  #pragma unroll
   for (int i = 0; i < 32; i += 8)
   {
     atomic_or (&words_buf_r[block].b[i + 0], (((w0 >> (i + 7)) & 1) << slice));
@@ -2475,7 +2483,7 @@ __kernel void __attribute__((reqd_work_group_size (32, 1, 1))) m03000_tm (__glob
   }
 }
 
-__kernel void __attribute__((reqd_work_group_size (2, 32, 1))) m03000_m04 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m03000_m04 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -2483,23 +2491,6 @@ __kernel void __attribute__((reqd_work_group_size (2, 32, 1))) m03000_m04 (__glo
 
   const u32 gid = get_global_id (0);
   const u32 lid = get_local_id (0);
-  const u32 vid = get_local_id (1);
-
-  const u32 s0 = digests_buf[digests_offset].digest_buf[0];
-  const u32 s1 = digests_buf[digests_offset].digest_buf[1];
-
-  __local u32 s_S[64];
-
-  if (lid == 0)
-  {
-    s_S[ 0 + vid] = -((s0 >> vid) & 1);
-  }
-  else if (lid == 1)
-  {
-    s_S[32 + vid] = -((s1 >> vid) & 1);
-  }
-
-  barrier (CLK_LOCAL_MEM_FENCE);
 
   if (gid >= gid_max) return;
 
@@ -2507,18 +2498,18 @@ __kernel void __attribute__((reqd_work_group_size (2, 32, 1))) m03000_m04 (__glo
    * main
    */
 
-  m03000m (s_S, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, bfs_cnt, digests_cnt, digests_offset);
+  m03000m (pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV0_buf, d_scryptV1_buf, d_scryptV2_buf, d_scryptV3_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, il_cnt, digests_cnt, digests_offset);
 }
 
-__kernel void __attribute__((reqd_work_group_size (2, 32, 1))) m03000_m08 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m03000_m08 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
 }
 
-__kernel void __attribute__((reqd_work_group_size (2, 32, 1))) m03000_m16 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m03000_m16 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
 }
 
-__kernel void __attribute__((reqd_work_group_size (2, 32, 1))) m03000_s04 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m03000_s04 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -2526,23 +2517,6 @@ __kernel void __attribute__((reqd_work_group_size (2, 32, 1))) m03000_s04 (__glo
 
   const u32 gid = get_global_id (0);
   const u32 lid = get_local_id (0);
-  const u32 vid = get_local_id (1);
-
-  const u32 s0 = digests_buf[digests_offset].digest_buf[0];
-  const u32 s1 = digests_buf[digests_offset].digest_buf[1];
-
-  __local u32 s_S[64];
-
-  if (lid == 0)
-  {
-    s_S[ 0 + vid] = -((s0 >> vid) & 1);
-  }
-  else if (lid == 1)
-  {
-    s_S[32 + vid] = -((s1 >> vid) & 1);
-  }
-
-  barrier (CLK_LOCAL_MEM_FENCE);
 
   if (gid >= gid_max) return;
 
@@ -2550,13 +2524,13 @@ __kernel void __attribute__((reqd_work_group_size (2, 32, 1))) m03000_s04 (__glo
    * main
    */
 
-  m03000s (s_S, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, bfs_cnt, digests_cnt, digests_offset);
+  m03000s (pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV0_buf, d_scryptV1_buf, d_scryptV2_buf, d_scryptV3_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, il_cnt, digests_cnt, digests_offset);
 }
 
-__kernel void __attribute__((reqd_work_group_size (2, 32, 1))) m03000_s08 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m03000_s08 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
 }
 
-__kernel void __attribute__((reqd_work_group_size (2, 32, 1))) m03000_s16 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m03000_s16 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global bs_word_t * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
 }

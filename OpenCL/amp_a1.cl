@@ -1,13 +1,13 @@
 /**
- * Author......: Jens Steube <jens.steube@gmail.com>
+ * Author......: See docs/credits.txt
  * License.....: MIT
  */
 
-#include "include/constants.h"
-#include "include/kernel_vendor.h"
-#include "OpenCL/types_ocl.c"
+#include "inc_hash_constants.h"
+#include "inc_vendor.cl"
+#include "inc_types.cl"
 
-static void switch_buffer_by_offset (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 offset)
+inline void switch_buffer_by_offset_le (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 offset)
 {
   #if defined IS_AMD || defined IS_GENERIC
   const int offset_mod_4 = offset & 3;
@@ -721,7 +721,7 @@ static void switch_buffer_by_offset (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4],
   #endif
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) amp (__global pw_t *pws, __global pw_t *pws_amp, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, const u32 combs_mode, const u32 gid_max)
+__kernel void amp (__global pw_t *pws, __global pw_t *pws_amp, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, const u32 combs_mode, const u32 gid_max)
 {
   const u32 gid = get_global_id (0);
 
@@ -789,12 +789,12 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) amp (__global pw_
 
   if (combs_mode == COMBINATOR_MODE_BASE_LEFT)
   {
-    switch_buffer_by_offset (wordr0, wordr1, wordr2, wordr3, pw_l_len);
+    switch_buffer_by_offset_le (wordr0, wordr1, wordr2, wordr3, pw_l_len);
   }
 
   if (combs_mode == COMBINATOR_MODE_BASE_RIGHT)
   {
-    switch_buffer_by_offset (wordl0, wordl1, wordl2, wordl3, pw_r_len);
+    switch_buffer_by_offset_le (wordl0, wordl1, wordl2, wordl3, pw_r_len);
   }
 
   u32 w0[4];

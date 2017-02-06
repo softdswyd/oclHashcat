@@ -1,26 +1,97 @@
 /**
- * Author......: Jens Steube <jens.steube@gmail.com>
+ * Author......: See docs/credits.txt
  * License.....: MIT
  */
 
 #define _MYSQL323_
 
-#include "include/constants.h"
-#include "include/kernel_vendor.h"
+#define NEW_SIMD_CODE
 
-#define DGST_R0 0
-#define DGST_R1 1
-#define DGST_R2 2
-#define DGST_R3 3
+#include "inc_vendor.cl"
+#include "inc_hash_constants.h"
+#include "inc_hash_functions.cl"
+#include "inc_types.cl"
+#include "inc_common.cl"
+#include "inc_simd.cl"
 
-#include "include/kernel_functions.c"
-#include "OpenCL/types_ocl.c"
-#include "OpenCL/common.c"
+#define ROUND(v)                              \
+{                                             \
+  a ^= (((a & 0x3f) + add) * (v)) + (a << 8); \
+  b += (b << 8) ^ a;                          \
+  add += v;                                   \
+}
 
-#define COMPARE_S "OpenCL/check_single_comp4.c"
-#define COMPARE_M "OpenCL/check_multi_comp4.c"
+#define CODE_PRE                                                  \
+{                                                                 \
+  for (u32 il_pos = 0; il_pos < il_cnt; il_pos += VECT_SIZE)      \
+  {                                                               \
+    const u32x w0r = words_buf_r[il_pos / VECT_SIZE];             \
+                                                                  \
+    const u32x w0 = w0l | w0r;                                    \
+                                                                  \
+    u32x a = MYSQL323_A;                                          \
+    u32x b = MYSQL323_B;                                          \
+                                                                  \
+    u32x add = 7;                                                 \
 
-static void m00200m (u32 w[16], const u32 pw_len, __global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __constant u32 * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset)
+#define CODE_LOOP(rest)                                           \
+                                                                  \
+    int i;                                                        \
+    int j;                                                        \
+                                                                  \
+    for (i = 0, j = 1; i <= (int) (rest) - 4; i += 4, j += 1)     \
+    {                                                             \
+      const u32 wj = w[j];                                        \
+                                                                  \
+      ROUND ((wj >>  0) & 0xff);                                  \
+      ROUND ((wj >>  8) & 0xff);                                  \
+      ROUND ((wj >> 16) & 0xff);                                  \
+      ROUND ((wj >> 24) & 0xff);                                  \
+    }                                                             \
+                                                                  \
+    const u32 wj = w[j];                                          \
+                                                                  \
+    const u32 left = (rest) - i;                                  \
+                                                                  \
+    if (left == 3)                                                \
+    {                                                             \
+      ROUND ((wj >>  0) & 0xff);                                  \
+      ROUND ((wj >>  8) & 0xff);                                  \
+      ROUND ((wj >> 16) & 0xff);                                  \
+    }                                                             \
+    else if (left == 2)                                           \
+    {                                                             \
+      ROUND ((wj >>  0) & 0xff);                                  \
+      ROUND ((wj >>  8) & 0xff);                                  \
+    }                                                             \
+    else if (left == 1)                                           \
+    {                                                             \
+      ROUND ((wj >>  0) & 0xff);                                  \
+    }
+
+#define CODE_POST_M                                               \
+                                                                  \
+    a &= 0x7fffffff;                                              \
+    b &= 0x7fffffff;                                              \
+                                                                  \
+    u32x z = 0;                                                   \
+                                                                  \
+    COMPARE_M_SIMD (a, b, z, z);                                  \
+  }                                                               \
+}
+
+#define CODE_POST_S                                               \
+                                                                  \
+    a &= 0x7fffffff;                                              \
+    b &= 0x7fffffff;                                              \
+                                                                  \
+    u32x z = 0;                                                   \
+                                                                  \
+    COMPARE_S_SIMD (a, b, z, z);                                  \
+  }                                                               \
+}
+
+static void m00200m (u32 w[16], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __constant u32x * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset)
 {
   /**
    * modifier
@@ -35,93 +106,138 @@ static void m00200m (u32 w[16], const u32 pw_len, __global pw_t *pws, __global k
 
   u32 w0l = w[0];
 
-  for (u32 il_pos = 0; il_pos < bfs_cnt; il_pos++)
+  switch (pw_len)
   {
-    const u32 w0r = words_buf_r[il_pos];
+    case  1:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff);
+      CODE_POST_M;
+      break;
 
-    const u32 w0 = w0l | w0r;
+    case  2:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff);
+      CODE_POST_M;
+      break;
 
-    u32 a = MYSQL323_A;
-    u32 b = MYSQL323_B;
+    case  3:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff);
+      CODE_POST_M;
+      break;
 
-    u32 add = 7;
+    case  4:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      CODE_POST_M;
+      break;
 
-    #define ROUND(v)                              \
-    {                                             \
-      a ^= (((a & 0x3f) + add) * (v)) + (a << 8); \
-      b += (b << 8) ^ a;                          \
-      add += v;                                   \
-    }
+    case  5:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff);
+      CODE_POST_M;
+      break;
 
-    if (pw_len >= 4)
-    {
-      ROUND ((w0 >>  0) & 0xff);
-      ROUND ((w0 >>  8) & 0xff);
-      ROUND ((w0 >> 16) & 0xff);
-      ROUND ((w0 >> 24) & 0xff);
-    }
-    else if (pw_len == 3)
-    {
-      ROUND ((w0 >>  0) & 0xff);
-      ROUND ((w0 >>  8) & 0xff);
-      ROUND ((w0 >> 16) & 0xff);
-    }
-    else if (pw_len == 2)
-    {
-      ROUND ((w0 >>  0) & 0xff);
-      ROUND ((w0 >>  8) & 0xff);
-    }
-    else if (pw_len == 1)
-    {
-      ROUND ((w0 >>  0) & 0xff);
-    }
+    case  6:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff);
+      CODE_POST_M;
+      break;
 
-    int i;
-    int j;
+    case  7:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff);
+      CODE_POST_M;
+      break;
 
-    for (i = 4, j = 1; i <= (int) pw_len - 4; i += 4, j += 1)
-    {
-      const u32 wj = w[j];
+    case  8:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      CODE_POST_M;
+      break;
 
-      ROUND ((wj >>  0) & 0xff);
-      ROUND ((wj >>  8) & 0xff);
-      ROUND ((wj >> 16) & 0xff);
-      ROUND ((wj >> 24) & 0xff);
-    }
+    case  9:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff);
+      CODE_POST_M;
+      break;
 
-    const u32 wj = w[j];
+    case 10:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff);
+      CODE_POST_M;
+      break;
 
-    const u32 left = pw_len - i;
+    case 11:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff); ROUND ((w[2] >> 16) & 0xff);
+      CODE_POST_M;
+      break;
 
-    if (left == 3)
-    {
-      ROUND ((wj >>  0) & 0xff);
-      ROUND ((wj >>  8) & 0xff);
-      ROUND ((wj >> 16) & 0xff);
-    }
-    else if (left == 2)
-    {
-      ROUND ((wj >>  0) & 0xff);
-      ROUND ((wj >>  8) & 0xff);
-    }
-    else if (left == 1)
-    {
-      ROUND ((wj >>  0) & 0xff);
-    }
+    case 12:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff); ROUND ((w[2] >> 16) & 0xff); ROUND ((w[2] >> 24) & 0xff);
+      CODE_POST_M;
+      break;
 
-    a &= 0x7fffffff;
-    b &= 0x7fffffff;
+    case 13:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff); ROUND ((w[2] >> 16) & 0xff); ROUND ((w[2] >> 24) & 0xff);
+      ROUND ((w[3] >>  0) & 0xff);
+      CODE_POST_M;
+      break;
 
-    const u32 r0 = a;
-    const u32 r1 = b;
-    const u32 r2 = 0;
-    const u32 r3 = 0;
+    case 14:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff); ROUND ((w[2] >> 16) & 0xff); ROUND ((w[2] >> 24) & 0xff);
+      ROUND ((w[3] >>  0) & 0xff); ROUND ((w[3] >>  8) & 0xff);
+      CODE_POST_M;
+      break;
 
-    #include COMPARE_M
+    case 15:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff); ROUND ((w[2] >> 16) & 0xff); ROUND ((w[2] >> 24) & 0xff);
+      ROUND ((w[3] >>  0) & 0xff); ROUND ((w[3] >>  8) & 0xff); ROUND ((w[3] >> 16) & 0xff);
+      CODE_POST_M;
+      break;
+
+    case 16:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff); ROUND ((w[2] >> 16) & 0xff); ROUND ((w[2] >> 24) & 0xff);
+      ROUND ((w[3] >>  0) & 0xff); ROUND ((w[3] >>  8) & 0xff); ROUND ((w[3] >> 16) & 0xff); ROUND ((w[3] >> 24) & 0xff);
+      CODE_POST_M;
+      break;
+
+    default:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      CODE_LOOP (pw_len - 4);
+      CODE_POST_M;
+      break;
   }
 }
 
-static void m00200s (u32 w[16], const u32 pw_len, __global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __constant u32 * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset)
+static void m00200s (u32 w[16], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __constant u32x * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset)
 {
   /**
    * modifier
@@ -138,8 +254,8 @@ static void m00200s (u32 w[16], const u32 pw_len, __global pw_t *pws, __global k
   {
     digests_buf[digests_offset].digest_buf[DGST_R0],
     digests_buf[digests_offset].digest_buf[DGST_R1],
-    digests_buf[digests_offset].digest_buf[DGST_R2],
-    digests_buf[digests_offset].digest_buf[DGST_R3]
+    0,
+    0
   };
 
   /**
@@ -148,93 +264,138 @@ static void m00200s (u32 w[16], const u32 pw_len, __global pw_t *pws, __global k
 
   u32 w0l = w[0];
 
-  for (u32 il_pos = 0; il_pos < bfs_cnt; il_pos++)
+  switch (pw_len)
   {
-    const u32 w0r = words_buf_r[il_pos];
+    case  1:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff);
+      CODE_POST_S;
+      break;
 
-    const u32 w0 = w0l | w0r;
+    case  2:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff);
+      CODE_POST_S;
+      break;
 
-    u32 a = MYSQL323_A;
-    u32 b = MYSQL323_B;
+    case  3:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff);
+      CODE_POST_S;
+      break;
 
-    u32 add = 7;
+    case  4:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      CODE_POST_S;
+      break;
 
-    #define ROUND(v)                              \
-    {                                             \
-      a ^= (((a & 0x3f) + add) * (v)) + (a << 8); \
-      b += (b << 8) ^ a;                          \
-      add += v;                                   \
-    }
+    case  5:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff);
+      CODE_POST_S;
+      break;
 
-    if (pw_len >= 4)
-    {
-      ROUND ((w0 >>  0) & 0xff);
-      ROUND ((w0 >>  8) & 0xff);
-      ROUND ((w0 >> 16) & 0xff);
-      ROUND ((w0 >> 24) & 0xff);
-    }
-    else if (pw_len == 3)
-    {
-      ROUND ((w0 >>  0) & 0xff);
-      ROUND ((w0 >>  8) & 0xff);
-      ROUND ((w0 >> 16) & 0xff);
-    }
-    else if (pw_len == 2)
-    {
-      ROUND ((w0 >>  0) & 0xff);
-      ROUND ((w0 >>  8) & 0xff);
-    }
-    else if (pw_len == 1)
-    {
-      ROUND ((w0 >>  0) & 0xff);
-    }
+    case  6:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff);
+      CODE_POST_S;
+      break;
 
-    int i;
-    int j;
+    case  7:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff);
+      CODE_POST_S;
+      break;
 
-    for (i = 4, j = 1; i <= (int) pw_len - 4; i += 4, j += 1)
-    {
-      const u32 wj = w[j];
+    case  8:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      CODE_POST_S;
+      break;
 
-      ROUND ((wj >>  0) & 0xff);
-      ROUND ((wj >>  8) & 0xff);
-      ROUND ((wj >> 16) & 0xff);
-      ROUND ((wj >> 24) & 0xff);
-    }
+    case  9:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff);
+      CODE_POST_S;
+      break;
 
-    const u32 wj = w[j];
+    case 10:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff);
+      CODE_POST_S;
+      break;
 
-    const u32 left = pw_len - i;
+    case 11:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff); ROUND ((w[2] >> 16) & 0xff);
+      CODE_POST_S;
+      break;
 
-    if (left == 3)
-    {
-      ROUND ((wj >>  0) & 0xff);
-      ROUND ((wj >>  8) & 0xff);
-      ROUND ((wj >> 16) & 0xff);
-    }
-    else if (left == 2)
-    {
-      ROUND ((wj >>  0) & 0xff);
-      ROUND ((wj >>  8) & 0xff);
-    }
-    else if (left == 1)
-    {
-      ROUND ((wj >>  0) & 0xff);
-    }
+    case 12:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff); ROUND ((w[2] >> 16) & 0xff); ROUND ((w[2] >> 24) & 0xff);
+      CODE_POST_S;
+      break;
 
-    a &= 0x7fffffff;
-    b &= 0x7fffffff;
+    case 13:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff); ROUND ((w[2] >> 16) & 0xff); ROUND ((w[2] >> 24) & 0xff);
+      ROUND ((w[3] >>  0) & 0xff);
+      CODE_POST_S;
+      break;
 
-    const u32 r0 = a;
-    const u32 r1 = b;
-    const u32 r2 = 0;
-    const u32 r3 = 0;
+    case 14:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff); ROUND ((w[2] >> 16) & 0xff); ROUND ((w[2] >> 24) & 0xff);
+      ROUND ((w[3] >>  0) & 0xff); ROUND ((w[3] >>  8) & 0xff);
+      CODE_POST_S;
+      break;
 
-    #include COMPARE_S
+    case 15:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff); ROUND ((w[2] >> 16) & 0xff); ROUND ((w[2] >> 24) & 0xff);
+      ROUND ((w[3] >>  0) & 0xff); ROUND ((w[3] >>  8) & 0xff); ROUND ((w[3] >> 16) & 0xff);
+      CODE_POST_S;
+      break;
+
+    case 16:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      ROUND ((w[1] >>  0) & 0xff); ROUND ((w[1] >>  8) & 0xff); ROUND ((w[1] >> 16) & 0xff); ROUND ((w[1] >> 24) & 0xff);
+      ROUND ((w[2] >>  0) & 0xff); ROUND ((w[2] >>  8) & 0xff); ROUND ((w[2] >> 16) & 0xff); ROUND ((w[2] >> 24) & 0xff);
+      ROUND ((w[3] >>  0) & 0xff); ROUND ((w[3] >>  8) & 0xff); ROUND ((w[3] >> 16) & 0xff); ROUND ((w[3] >> 24) & 0xff);
+      CODE_POST_S;
+      break;
+
+    default:
+      CODE_PRE;
+      ROUND ((w0   >>  0) & 0xff); ROUND ((w0   >>  8) & 0xff); ROUND ((w0   >> 16) & 0xff); ROUND ((w0   >> 24) & 0xff);
+      CODE_LOOP (pw_len - 4);
+      CODE_POST_S;
+      break;
   }
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m00200_m04 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __constant u32 * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m00200_m04 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __constant u32x * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -269,10 +430,10 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m00200_m04 (__glo
    * main
    */
 
-  m00200m (w, pw_len, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, bfs_cnt, digests_cnt, digests_offset);
+  m00200m (w, pw_len, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV0_buf, d_scryptV1_buf, d_scryptV2_buf, d_scryptV3_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, il_cnt, digests_cnt, digests_offset);
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m00200_m08 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __constant u32 * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m00200_m08 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __constant u32x * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -307,10 +468,10 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m00200_m08 (__glo
    * main
    */
 
-  m00200m (w, pw_len, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, bfs_cnt, digests_cnt, digests_offset);
+  m00200m (w, pw_len, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV0_buf, d_scryptV1_buf, d_scryptV2_buf, d_scryptV3_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, il_cnt, digests_cnt, digests_offset);
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m00200_m16 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __constant u32 * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m00200_m16 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __constant u32x * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -345,10 +506,10 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m00200_m16 (__glo
    * main
    */
 
-  m00200m (w, pw_len, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, bfs_cnt, digests_cnt, digests_offset);
+  m00200m (w, pw_len, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV0_buf, d_scryptV1_buf, d_scryptV2_buf, d_scryptV3_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, il_cnt, digests_cnt, digests_offset);
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m00200_s04 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __constant u32 * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m00200_s04 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __constant u32x * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -383,10 +544,10 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m00200_s04 (__glo
    * main
    */
 
-  m00200s (w, pw_len, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, bfs_cnt, digests_cnt, digests_offset);
+  m00200s (w, pw_len, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV0_buf, d_scryptV1_buf, d_scryptV2_buf, d_scryptV3_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, il_cnt, digests_cnt, digests_offset);
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m00200_s08 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __constant u32 * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m00200_s08 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __constant u32x * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -421,10 +582,10 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m00200_s08 (__glo
    * main
    */
 
-  m00200s (w, pw_len, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, bfs_cnt, digests_cnt, digests_offset);
+  m00200s (w, pw_len, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV0_buf, d_scryptV1_buf, d_scryptV2_buf, d_scryptV3_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, il_cnt, digests_cnt, digests_offset);
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m00200_s16 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __constant u32 * words_buf_r, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 bfs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m00200_s16 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __constant u32x * words_buf_r, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -459,5 +620,5 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m00200_s16 (__glo
    * main
    */
 
-  m00200s (w, pw_len, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, bfs_cnt, digests_cnt, digests_offset);
+  m00200s (w, pw_len, pws, rules_buf, combs_buf, words_buf_r, tmps, hooks, bitmaps_buf_s1_a, bitmaps_buf_s1_b, bitmaps_buf_s1_c, bitmaps_buf_s1_d, bitmaps_buf_s2_a, bitmaps_buf_s2_b, bitmaps_buf_s2_c, bitmaps_buf_s2_d, plains_buf, digests_buf, hashes_shown, salt_bufs, esalt_bufs, d_return_buf, d_scryptV0_buf, d_scryptV1_buf, d_scryptV2_buf, d_scryptV3_buf, bitmap_mask, bitmap_shift1, bitmap_shift2, salt_pos, loop_pos, loop_cnt, il_cnt, digests_cnt, digests_offset);
 }

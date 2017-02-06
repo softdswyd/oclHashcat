@@ -1,24 +1,18 @@
 /**
- * Author......: Jens Steube <jens.steube@gmail.com>
+ * Author......: See docs/credits.txt
  * License.....: MIT
  */
 
 #define _MD5_
 
-#include "include/constants.h"
-#include "include/kernel_vendor.h"
+#include "inc_vendor.cl"
+#include "inc_hash_constants.h"
+#include "inc_hash_functions.cl"
+#include "inc_types.cl"
+#include "inc_common.cl"
 
-#define DGST_R0 0
-#define DGST_R1 1
-#define DGST_R2 2
-#define DGST_R3 3
-
-#include "include/kernel_functions.c"
-#include "OpenCL/types_ocl.c"
-#include "OpenCL/common.c"
-
-#define COMPARE_S "OpenCL/check_single_comp4.c"
-#define COMPARE_M "OpenCL/check_multi_comp4.c"
+#define COMPARE_S "inc_comp_single.cl"
+#define COMPARE_M "inc_comp_multi.cl"
 
 __constant u32 padding[8] =
 {
@@ -56,7 +50,9 @@ static void rc4_init_16 (__local RC4_KEY *rc4_key, const u32 data[4])
 
   __local u32 *ptr = (__local u32 *) rc4_key->S;
 
+  #ifdef _unroll
   #pragma unroll
+  #endif
   for (u32 i = 0; i < 64; i++)
   {
     *ptr++ = v; v += a;
@@ -64,7 +60,9 @@ static void rc4_init_16 (__local RC4_KEY *rc4_key, const u32 data[4])
 
   u32 j = 0;
 
+  #ifdef _unroll
   #pragma unroll
+  #endif
   for (u32 i = 0; i < 16; i++)
   {
     u32 idx = i * 16;
@@ -103,7 +101,9 @@ static void rc4_init_16 (__local RC4_KEY *rc4_key, const u32 data[4])
 
 static u8 rc4_next_16 (__local RC4_KEY *rc4_key, u8 i, u8 j, const u32 in[4], u32 out[4])
 {
+  #ifdef _unroll
   #pragma unroll
+  #endif
   for (u32 k = 0; k < 4; k++)
   {
     u32 xor4 = 0;
@@ -176,8 +176,6 @@ static void md5_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], co
   u32 we_t = w3[2];
   u32 wf_t = w3[3];
 
-  u32 tmp2;
-
   MD5_STEP (MD5_Fo, a, b, c, d, w0_t, MD5C00, MD5S00);
   MD5_STEP (MD5_Fo, d, a, b, c, w1_t, MD5C01, MD5S01);
   MD5_STEP (MD5_Fo, c, d, a, b, w2_t, MD5C02, MD5S02);
@@ -212,22 +210,22 @@ static void md5_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], co
   MD5_STEP (MD5_Go, c, d, a, b, w7_t, MD5C1e, MD5S12);
   MD5_STEP (MD5_Go, b, c, d, a, wc_t, MD5C1f, MD5S13);
 
-  MD5_STEP (MD5_H1, a, b, c, d, w5_t, MD5C20, MD5S20);
-  MD5_STEP (MD5_H2, d, a, b, c, w8_t, MD5C21, MD5S21);
-  MD5_STEP (MD5_H1, c, d, a, b, wb_t, MD5C22, MD5S22);
-  MD5_STEP (MD5_H2, b, c, d, a, we_t, MD5C23, MD5S23);
-  MD5_STEP (MD5_H1, a, b, c, d, w1_t, MD5C24, MD5S20);
-  MD5_STEP (MD5_H2, d, a, b, c, w4_t, MD5C25, MD5S21);
-  MD5_STEP (MD5_H1, c, d, a, b, w7_t, MD5C26, MD5S22);
-  MD5_STEP (MD5_H2, b, c, d, a, wa_t, MD5C27, MD5S23);
-  MD5_STEP (MD5_H1, a, b, c, d, wd_t, MD5C28, MD5S20);
-  MD5_STEP (MD5_H2, d, a, b, c, w0_t, MD5C29, MD5S21);
-  MD5_STEP (MD5_H1, c, d, a, b, w3_t, MD5C2a, MD5S22);
-  MD5_STEP (MD5_H2, b, c, d, a, w6_t, MD5C2b, MD5S23);
-  MD5_STEP (MD5_H1, a, b, c, d, w9_t, MD5C2c, MD5S20);
-  MD5_STEP (MD5_H2, d, a, b, c, wc_t, MD5C2d, MD5S21);
-  MD5_STEP (MD5_H1, c, d, a, b, wf_t, MD5C2e, MD5S22);
-  MD5_STEP (MD5_H2, b, c, d, a, w2_t, MD5C2f, MD5S23);
+  MD5_STEP (MD5_H , a, b, c, d, w5_t, MD5C20, MD5S20);
+  MD5_STEP (MD5_H , d, a, b, c, w8_t, MD5C21, MD5S21);
+  MD5_STEP (MD5_H , c, d, a, b, wb_t, MD5C22, MD5S22);
+  MD5_STEP (MD5_H , b, c, d, a, we_t, MD5C23, MD5S23);
+  MD5_STEP (MD5_H , a, b, c, d, w1_t, MD5C24, MD5S20);
+  MD5_STEP (MD5_H , d, a, b, c, w4_t, MD5C25, MD5S21);
+  MD5_STEP (MD5_H , c, d, a, b, w7_t, MD5C26, MD5S22);
+  MD5_STEP (MD5_H , b, c, d, a, wa_t, MD5C27, MD5S23);
+  MD5_STEP (MD5_H , a, b, c, d, wd_t, MD5C28, MD5S20);
+  MD5_STEP (MD5_H , d, a, b, c, w0_t, MD5C29, MD5S21);
+  MD5_STEP (MD5_H , c, d, a, b, w3_t, MD5C2a, MD5S22);
+  MD5_STEP (MD5_H , b, c, d, a, w6_t, MD5C2b, MD5S23);
+  MD5_STEP (MD5_H , a, b, c, d, w9_t, MD5C2c, MD5S20);
+  MD5_STEP (MD5_H , d, a, b, c, wc_t, MD5C2d, MD5S21);
+  MD5_STEP (MD5_H , c, d, a, b, wf_t, MD5C2e, MD5S22);
+  MD5_STEP (MD5_H , b, c, d, a, w2_t, MD5C2f, MD5S23);
 
   MD5_STEP (MD5_I , a, b, c, d, w0_t, MD5C30, MD5S30);
   MD5_STEP (MD5_I , d, a, b, c, w7_t, MD5C31, MD5S31);
@@ -252,14 +250,14 @@ static void md5_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], co
   digest[3] += d;
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m10500_init (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global pdf14_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global pdf_t *pdf_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m10500_init (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global pdf14_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global pdf_t *pdf_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
    */
 
   const u32 gid = get_global_id (0);
-  const u32 lid = get_local_id (0);
+  //const u32 lid = get_local_id (0);
 
   if (gid >= gid_max) return;
 
@@ -290,9 +288,8 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m10500_init (__gl
    * shared
    */
 
-  __local RC4_KEY rc4_keys[64];
-
-  __local RC4_KEY *rc4_key = &rc4_keys[lid];
+  //__local RC4_KEY rc4_keys[64];
+  //__local RC4_KEY *rc4_key = &rc4_keys[lid];
 
   /**
    * U_buf
@@ -380,7 +377,7 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m10500_init (__gl
   w3_t[2] = 0;
   w3_t[3] = 0;
 
-  switch_buffer_by_offset (w0_t, w1_t, w2_t, w3_t, pw_len);
+  switch_buffer_by_offset_le (w0_t, w1_t, w2_t, w3_t, pw_len);
 
   // add password
   // truncate at 32 is wanted, not a bug!
@@ -442,7 +439,7 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m10500_init (__gl
   tmps[gid].out[3] = 0;
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m10500_loop (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global pdf14_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global pdf_t *pdf_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m10500_loop (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global pdf14_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global pdf_t *pdf_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -545,7 +542,7 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m10500_loop (__gl
   tmps[gid].out[3] = out[3];
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m10500_comp (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global pdf14_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global pdf_t *pdf_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m10500_comp (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global pdf14_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global pdf_t *pdf_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * modifier

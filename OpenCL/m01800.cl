@@ -1,24 +1,27 @@
 /**
- * Author......: Jens Steube <jens.steube@gmail.com>
+ * Author......: See docs/credits.txt
  * License.....: MIT
  */
 
 #define _SHA512_
 
-#include "include/constants.h"
-#include "include/kernel_vendor.h"
+#include "inc_vendor.cl"
+#include "inc_hash_constants.h"
+#include "inc_hash_functions.cl"
+#include "inc_types.cl"
+#include "inc_common.cl"
 
-#define DGST_R0 0
-#define DGST_R1 1
-#define DGST_R2 2
-#define DGST_R3 3
+#define COMPARE_S "inc_comp_single.cl"
+#define COMPARE_M "inc_comp_multi.cl"
 
-#include "include/kernel_functions.c"
-#include "OpenCL/types_ocl.c"
-#include "OpenCL/common.c"
+// Buggy drivers...
 
-#define COMPARE_S "OpenCL/check_single_comp4.c"
-#define COMPARE_M "OpenCL/check_multi_comp4.c"
+#ifdef IS_AMD
+#define STATE_DECL volatile
+//#define STATE_DECL
+#else
+#define STATE_DECL
+#endif
 
 #define PUTCHAR64_BE(a,p,c) ((u8 *)(a))[(p) ^ 7] = (u8) (c)
 #define GETCHAR64_BE(a,p)   ((u8 *)(a))[(p) ^ 7]
@@ -55,7 +58,7 @@ __constant u64 k_sha512[80] =
   SHA512C4c, SHA512C4d, SHA512C4e, SHA512C4f,
 };
 
-static void sha512_transform (const u64 w[16], u64 digest[8])
+static void sha512_transform (const u64 *w, u64 *digest)
 {
   u64 w0_t = w[ 0];
   u64 w1_t = w[ 1];
@@ -74,14 +77,14 @@ static void sha512_transform (const u64 w[16], u64 digest[8])
   u64 we_t = w[14];
   u64 wf_t = w[15];
 
-  u64 a = digest[0];
-  u64 b = digest[1];
-  u64 c = digest[2];
-  u64 d = digest[3];
-  u64 e = digest[4];
-  u64 f = digest[5];
-  u64 g = digest[6];
-  u64 h = digest[7];
+  STATE_DECL u64 a = digest[0];
+  STATE_DECL u64 b = digest[1];
+  STATE_DECL u64 c = digest[2];
+  STATE_DECL u64 d = digest[3];
+  STATE_DECL u64 e = digest[4];
+  STATE_DECL u64 f = digest[5];
+  STATE_DECL u64 g = digest[6];
+  STATE_DECL u64 h = digest[7];
 
   #define ROUND_EXPAND()                            \
   {                                                 \
@@ -125,7 +128,9 @@ static void sha512_transform (const u64 w[16], u64 digest[8])
 
   ROUND_STEP (0);
 
+  #ifdef _unroll
   #pragma unroll
+  #endif
   for (int i = 16; i < 80; i += 16)
   {
     ROUND_EXPAND (); ROUND_STEP (i);
@@ -140,73 +145,6 @@ static void sha512_transform (const u64 w[16], u64 digest[8])
   digest[6] += g;
   digest[7] += h;
 }
-
-#ifdef IS_AMD
-static void sha512_transform_workaround (const u64 w[16], u64 digest[8])
-{
-  u64 w0_t = w[ 0];
-  u64 w1_t = w[ 1];
-  u64 w2_t = w[ 2];
-  u64 w3_t = w[ 3];
-  u64 w4_t = w[ 4];
-  u64 w5_t = w[ 5];
-  u64 w6_t = w[ 6];
-  u64 w7_t = w[ 7];
-  u64 w8_t = w[ 8];
-  u64 w9_t = w[ 9];
-  u64 wa_t = w[10];
-  u64 wb_t = w[11];
-  u64 wc_t = w[12];
-  u64 wd_t = w[13];
-  u64 we_t = w[14];
-  u64 wf_t = w[15];
-
-  u64 a = digest[0];
-  u64 b = digest[1];
-  u64 c = digest[2];
-  u64 d = digest[3];
-  u64 e = digest[4];
-  u64 f = digest[5];
-  u64 g = digest[6];
-  u64 h = digest[7];
-
-  #define ROUND_EXPAND_WO()                            \
-  {                                                    \
-    w0_t = SHA512_EXPAND_WO (we_t, w9_t, w1_t, w0_t);  \
-    w1_t = SHA512_EXPAND_WO (wf_t, wa_t, w2_t, w1_t);  \
-    w2_t = SHA512_EXPAND_WO (w0_t, wb_t, w3_t, w2_t);  \
-    w3_t = SHA512_EXPAND_WO (w1_t, wc_t, w4_t, w3_t);  \
-    w4_t = SHA512_EXPAND_WO (w2_t, wd_t, w5_t, w4_t);  \
-    w5_t = SHA512_EXPAND_WO (w3_t, we_t, w6_t, w5_t);  \
-    w6_t = SHA512_EXPAND_WO (w4_t, wf_t, w7_t, w6_t);  \
-    w7_t = SHA512_EXPAND_WO (w5_t, w0_t, w8_t, w7_t);  \
-    w8_t = SHA512_EXPAND_WO (w6_t, w1_t, w9_t, w8_t);  \
-    w9_t = SHA512_EXPAND_WO (w7_t, w2_t, wa_t, w9_t);  \
-    wa_t = SHA512_EXPAND_WO (w8_t, w3_t, wb_t, wa_t);  \
-    wb_t = SHA512_EXPAND_WO (w9_t, w4_t, wc_t, wb_t);  \
-    wc_t = SHA512_EXPAND_WO (wa_t, w5_t, wd_t, wc_t);  \
-    wd_t = SHA512_EXPAND_WO (wb_t, w6_t, we_t, wd_t);  \
-    we_t = SHA512_EXPAND_WO (wc_t, w7_t, wf_t, we_t);  \
-    wf_t = SHA512_EXPAND_WO (wd_t, w8_t, w0_t, wf_t);  \
-  }
-
-  ROUND_STEP (0);
-
-  for (int i = 16; i < 80; i += 16)
-  {
-    ROUND_EXPAND_WO (); ROUND_STEP (i);
-  }
-
-  digest[0] += a;
-  digest[1] += b;
-  digest[2] += c;
-  digest[3] += d;
-  digest[4] += e;
-  digest[5] += f;
-  digest[6] += g;
-  digest[7] += h;
-}
-#endif
 
 static void sha512_init (sha512_ctx_t *sha512_ctx)
 {
@@ -245,17 +183,7 @@ static void sha512_update (sha512_ctx_t *sha512_ctx, const u64 *buf, int len)
     PUTCHAR64_BE (sha512_ctx->buf, pos++, GETCHAR64_BE (buf, i));
   }
 
-  #ifdef IS_AMD
-  sha512_transform_workaround (sha512_ctx->buf, sha512_ctx->state);
-  #endif
-
-  #ifdef IS_NV
   sha512_transform (sha512_ctx->buf, sha512_ctx->state);
-  #endif
-
-  #ifdef IS_GENERIC
-  sha512_transform (sha512_ctx->buf, sha512_ctx->state);
-  #endif
 
   len -= cnt;
 
@@ -303,7 +231,7 @@ static void sha512_final (sha512_ctx_t *sha512_ctx)
   sha512_transform (sha512_ctx->buf, sha512_ctx->state);
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m01800_init (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global sha512crypt_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m01800_init (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global sha512crypt_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -432,7 +360,7 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m01800_init (__gl
   tmps[gid].l_s_bytes[1] = sha512_ctx.state[1];
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m01800_loop (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global sha512crypt_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m01800_loop (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global sha512crypt_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -568,7 +496,9 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m01800_loop (__gl
     {
       const u32 block_len = wpc_len[pc];
 
-      #pragma unroll 64
+      #ifdef _unroll
+      #pragma unroll
+      #endif
       for (u32 k = 0, p = block_len - 64; k < 64; k++, p++)
       {
         PUTCHAR64_BE (block, p, GETCHAR64_BE (l_alt_result, k));
@@ -608,7 +538,7 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m01800_loop (__gl
   tmps[gid].l_alt_result[7] = l_alt_result[7];
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m01800_comp (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global sha512crypt_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m01800_comp (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global sha512crypt_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base

@@ -1,24 +1,18 @@
 /**
- * Author......: Jens Steube <jens.steube@gmail.com>
+ * Author......: See docs/credits.txt
  * License.....: MIT
  */
 
 #define _SCRYPT_
 
-#include "include/constants.h"
-#include "include/kernel_vendor.h"
+#include "inc_vendor.cl"
+#include "inc_hash_constants.h"
+#include "inc_hash_functions.cl"
+#include "inc_types.cl"
+#include "inc_common.cl"
 
-#define DGST_R0 0
-#define DGST_R1 1
-#define DGST_R2 2
-#define DGST_R3 3
-
-#include "include/kernel_functions.c"
-#include "OpenCL/types_ocl.c"
-#include "OpenCL/common.c"
-
-#define COMPARE_S "OpenCL/check_single_comp4.c"
-#define COMPARE_M "OpenCL/check_multi_comp4.c"
+#define COMPARE_S "inc_comp_single.cl"
+#define COMPARE_M "inc_comp_multi.cl"
 
 __constant u32 k_sha256[64] =
 {
@@ -110,7 +104,9 @@ static void sha256_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4],
 
   ROUND_STEP (0);
 
+  #ifdef _unroll
   #pragma unroll
+  #endif
   for (int i = 16; i < 64; i += 16)
   {
     ROUND_EXPAND (); ROUND_STEP (i);
@@ -620,92 +616,74 @@ static uint4 swap32_4 (uint4 v)
   R3 = R3 + X3;         \
 }
 
-static void salsa_r (uint4 *T)
+static void salsa_r (uint4 *TI)
 {
-  uint4 R0 = T[STATE_CNT4 - 4];
-  uint4 R1 = T[STATE_CNT4 - 3];
-  uint4 R2 = T[STATE_CNT4 - 2];
-  uint4 R3 = T[STATE_CNT4 - 1];
+  uint4 R0 = TI[STATE_CNT4 - 4];
+  uint4 R1 = TI[STATE_CNT4 - 3];
+  uint4 R2 = TI[STATE_CNT4 - 2];
+  uint4 R3 = TI[STATE_CNT4 - 1];
 
-  for (u32 i = 0; i < STATE_CNT4; i += 8)
+  uint4 TO[STATE_CNT4];
+
+  int idx_y  = 0;
+  int idx_r1 = 0;
+  int idx_r2 = SCRYPT_R * 4;
+
+  for (int i = 0; i < SCRYPT_R; i++)
   {
     uint4 Y0;
     uint4 Y1;
     uint4 Y2;
     uint4 Y3;
 
-    Y0 = T[i + 0];
-    Y1 = T[i + 1];
-    Y2 = T[i + 2];
-    Y3 = T[i + 3];
+    Y0 = TI[idx_y++];
+    Y1 = TI[idx_y++];
+    Y2 = TI[idx_y++];
+    Y3 = TI[idx_y++];
 
     SALSA20_8_XOR ();
 
-    T[i + 0] = R0;
-    T[i + 1] = R1;
-    T[i + 2] = R2;
-    T[i + 3] = R3;
+    TO[idx_r1++] = R0;
+    TO[idx_r1++] = R1;
+    TO[idx_r1++] = R2;
+    TO[idx_r1++] = R3;
 
-    Y0 = T[i + 4];
-    Y1 = T[i + 5];
-    Y2 = T[i + 6];
-    Y3 = T[i + 7];
+    Y0 = TI[idx_y++];
+    Y1 = TI[idx_y++];
+    Y2 = TI[idx_y++];
+    Y3 = TI[idx_y++];
 
     SALSA20_8_XOR ();
 
-    T[i + 4] = R0;
-    T[i + 5] = R1;
-    T[i + 6] = R2;
-    T[i + 7] = R3;
+    TO[idx_r2++] = R0;
+    TO[idx_r2++] = R1;
+    TO[idx_r2++] = R2;
+    TO[idx_r2++] = R3;
   }
 
-  #define exchg(x,y) { const uint4 t = T[(x)]; T[(x)] = T[(y)]; T[(y)] = t; }
-
-  #define exchg4(x,y)         \
-  {                           \
-    const u32 x4 = (x) * 4;  \
-    const u32 y4 = (y) * 4;  \
-                              \
-    exchg (x4 + 0, y4 + 0);   \
-    exchg (x4 + 1, y4 + 1);   \
-    exchg (x4 + 2, y4 + 2);   \
-    exchg (x4 + 3, y4 + 3);   \
-  }
-
-  for (u32 i = 1; i < SCRYPT_R / 1; i++)
+  #pragma unroll
+  for (int i = 0; i < STATE_CNT4; i++)
   {
-    const u32 x = i * 1;
-    const u32 y = i * 2;
-
-    exchg4 (x, y);
-  }
-
-  for (u32 i = 1; i < SCRYPT_R / 2; i++)
-  {
-    const u32 x = i * 1;
-    const u32 y = i * 2;
-
-    const u32 xr1 = (SCRYPT_R * 2) - 1 - x;
-    const u32 yr1 = (SCRYPT_R * 2) - 1 - y;
-
-    exchg4 (xr1, yr1);
+    TI[i] = TO[i];
   }
 }
 
-static void scrypt_smix (uint4 *X, uint4 *T, const u32 phy, __global uint4 *V)
+static void scrypt_smix (uint4 *X, uint4 *T, __global uint4 *V0, __global uint4 *V1, __global uint4 *V2, __global uint4 *V3)
 {
-  #define Coord(x,y,z) (((x) * zSIZE) + ((y) * zSIZE * xSIZE) + (z))
-  #define CO Coord(x,y,z)
+  #define Coord(xd4,y,z) (((xd4) * ySIZE * zSIZE) + ((y) * zSIZE) + (z))
+  #define CO Coord(xd4,y,z)
 
-  const u32 xSIZE = phy;
   const u32 ySIZE = SCRYPT_N / SCRYPT_TMTO;
   const u32 zSIZE = STATE_CNT4;
 
-  const u32 gid = get_global_id (0);
+  const u32 x = get_global_id (0);
 
-  const u32 x = gid % xSIZE;
+  const u32 xd4 = x / 4;
+  const u32 xm4 = x & 3;
 
+  #ifdef _unroll
   #pragma unroll
+  #endif
   for (u32 i = 0; i < STATE_CNT4; i += 4)
   {
     T[0] = (uint4) (X[i + 0].x, X[i + 1].y, X[i + 2].z, X[i + 3].w);
@@ -721,7 +699,13 @@ static void scrypt_smix (uint4 *X, uint4 *T, const u32 phy, __global uint4 *V)
 
   for (u32 y = 0; y < ySIZE; y++)
   {
-    for (u32 z = 0; z < zSIZE; z++) V[CO] = X[z];
+    switch (xm4)
+    {
+      case 0: for (u32 z = 0; z < zSIZE; z++) V0[CO] = X[z]; break;
+      case 1: for (u32 z = 0; z < zSIZE; z++) V1[CO] = X[z]; break;
+      case 2: for (u32 z = 0; z < zSIZE; z++) V2[CO] = X[z]; break;
+      case 3: for (u32 z = 0; z < zSIZE; z++) V3[CO] = X[z]; break;
+    }
 
     for (u32 i = 0; i < SCRYPT_TMTO; i++) salsa_r (X);
   }
@@ -734,7 +718,13 @@ static void scrypt_smix (uint4 *X, uint4 *T, const u32 phy, __global uint4 *V)
 
     const u32 km = k - (y * SCRYPT_TMTO);
 
-    for (u32 z = 0; z < zSIZE; z++) T[z] = V[CO];
+    switch (xm4)
+    {
+      case 0: for (u32 z = 0; z < zSIZE; z++) T[z] = V0[CO]; break;
+      case 1: for (u32 z = 0; z < zSIZE; z++) T[z] = V1[CO]; break;
+      case 2: for (u32 z = 0; z < zSIZE; z++) T[z] = V2[CO]; break;
+      case 3: for (u32 z = 0; z < zSIZE; z++) T[z] = V3[CO]; break;
+    }
 
     for (u32 i = 0; i < km; i++) salsa_r (T);
 
@@ -743,7 +733,9 @@ static void scrypt_smix (uint4 *X, uint4 *T, const u32 phy, __global uint4 *V)
     salsa_r (X);
   }
 
+  #ifdef _unroll
   #pragma unroll
+  #endif
   for (u32 i = 0; i < STATE_CNT4; i += 4)
   {
     T[0] = (uint4) (X[i + 0].x, X[i + 3].y, X[i + 2].z, X[i + 1].w);
@@ -758,7 +750,7 @@ static void scrypt_smix (uint4 *X, uint4 *T, const u32 phy, __global uint4 *V)
   }
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m08900_init (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global scrypt_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global uint4 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m08900_init (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global scrypt_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global uint4 *d_scryptV0_buf, __global uint4 *d_scryptV1_buf, __global uint4 *d_scryptV2_buf, __global uint4 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -899,23 +891,25 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m08900_init (__gl
   }
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m08900_loop (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global scrypt_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global uint4 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m08900_loop (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global scrypt_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global uint4 *d_scryptV0_buf, __global uint4 *d_scryptV1_buf, __global uint4 *d_scryptV2_buf, __global uint4 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   const u32 gid = get_global_id (0);
 
   if (gid >= gid_max) return;
 
-  const u32 scrypt_phy = salt_bufs[salt_pos].scrypt_phy;
-
   uint4 X[STATE_CNT4];
   uint4 T[STATE_CNT4];
 
+  #ifdef _unroll
   #pragma unroll
+  #endif
   for (int z = 0; z < STATE_CNT4; z++) X[z] = swap32_4 (tmps[gid].P[z]);
 
-  scrypt_smix (X, T, scrypt_phy, d_scryptV_buf);
+  scrypt_smix (X, T, d_scryptV0_buf, d_scryptV1_buf, d_scryptV2_buf, d_scryptV3_buf);
 
+  #ifdef _unroll
   #pragma unroll
+  #endif
   for (int z = 0; z < STATE_CNT4; z++) tmps[gid].P[z] = swap32_4 (X[z]);
 
   #if SCRYPT_P >= 1
@@ -923,14 +917,14 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m08900_loop (__gl
   {
     for (int z = 0; z < STATE_CNT4; z++) X[z] = swap32_4 (tmps[gid].P[i + z]);
 
-    scrypt_smix (X, T, scrypt_phy, d_scryptV_buf);
+    scrypt_smix (X, T, d_scryptV0_buf, d_scryptV1_buf, d_scryptV2_buf, d_scryptV3_buf);
 
     for (int z = 0; z < STATE_CNT4; z++) tmps[gid].P[i + z] = swap32_4 (X[z]);
   }
   #endif
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m08900_comp (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global scrypt_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global uint4 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m08900_comp (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global scrypt_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global uint4 *d_scryptV0_buf, __global uint4 *d_scryptV1_buf, __global uint4 *d_scryptV2_buf, __global uint4 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base

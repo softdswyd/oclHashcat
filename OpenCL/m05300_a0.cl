@@ -1,50 +1,44 @@
 /**
- * Author......: Jens Steube <jens.steube@gmail.com>
+ * Author......: See docs/credits.txt
  * License.....: MIT
  */
 
 #define _MD5_
 
-#include "include/constants.h"
-#include "include/kernel_vendor.h"
+#define NEW_SIMD_CODE
 
-#define DGST_R0 0
-#define DGST_R1 3
-#define DGST_R2 2
-#define DGST_R3 1
+#include "inc_vendor.cl"
+#include "inc_hash_constants.h"
+#include "inc_hash_functions.cl"
+#include "inc_types.cl"
+#include "inc_common.cl"
+#include "inc_rp.h"
+#include "inc_rp.cl"
+#include "inc_simd.cl"
 
-#include "include/kernel_functions.c"
-#include "OpenCL/types_ocl.c"
-#include "OpenCL/common.c"
-#include "include/rp_kernel.h"
-#include "OpenCL/rp.c"
-
-#define COMPARE_S "OpenCL/check_single_comp4.c"
-#define COMPARE_M "OpenCL/check_multi_comp4.c"
-
-static void md5_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[4])
+static void md5_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[4])
 {
-  u32 a = digest[0];
-  u32 b = digest[1];
-  u32 c = digest[2];
-  u32 d = digest[3];
+  u32x a = digest[0];
+  u32x b = digest[1];
+  u32x c = digest[2];
+  u32x d = digest[3];
 
-  u32 w0_t = w0[0];
-  u32 w1_t = w0[1];
-  u32 w2_t = w0[2];
-  u32 w3_t = w0[3];
-  u32 w4_t = w1[0];
-  u32 w5_t = w1[1];
-  u32 w6_t = w1[2];
-  u32 w7_t = w1[3];
-  u32 w8_t = w2[0];
-  u32 w9_t = w2[1];
-  u32 wa_t = w2[2];
-  u32 wb_t = w2[3];
-  u32 wc_t = w3[0];
-  u32 wd_t = w3[1];
-  u32 we_t = w3[2];
-  u32 wf_t = w3[3];
+  u32x w0_t = w0[0];
+  u32x w1_t = w0[1];
+  u32x w2_t = w0[2];
+  u32x w3_t = w0[3];
+  u32x w4_t = w1[0];
+  u32x w5_t = w1[1];
+  u32x w6_t = w1[2];
+  u32x w7_t = w1[3];
+  u32x w8_t = w2[0];
+  u32x w9_t = w2[1];
+  u32x wa_t = w2[2];
+  u32x wb_t = w2[3];
+  u32x wc_t = w3[0];
+  u32x wd_t = w3[1];
+  u32x we_t = w3[2];
+  u32x wf_t = w3[3];
 
   MD5_STEP (MD5_Fo, a, b, c, d, w0_t, MD5C00, MD5S00);
   MD5_STEP (MD5_Fo, d, a, b, c, w1_t, MD5C01, MD5S01);
@@ -120,7 +114,7 @@ static void md5_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], co
   digest[3] += d;
 }
 
-static void hmac_md5_pad (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[4], u32 opad[4])
+static void hmac_md5_pad (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4])
 {
   w0[0] = w0[0] ^ 0x36363636;
   w0[1] = w0[1] ^ 0x36363636;
@@ -171,7 +165,7 @@ static void hmac_md5_pad (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[4
   md5_transform (w0, w1, w2, w3, opad);
 }
 
-static void hmac_md5_run (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[4], u32 opad[4], u32 digest[4])
+static void hmac_md5_run (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4], u32x digest[4])
 {
   digest[0] = ipad[0];
   digest[1] = ipad[1];
@@ -205,33 +199,55 @@ static void hmac_md5_run (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[4
   md5_transform (w0, w1, w2, w3, digest);
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m05300_m04 (__global pw_t *pws, __global kernel_rule_t *  rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m05300_m04 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * modifier
    */
 
+  const u32 gid = get_global_id (0);
   const u32 lid = get_local_id (0);
+  const u32 lsz = get_local_size (0);
+
+  /**
+   * s_msg
+   */
+
+  __local u32 w_s[16];
+
+  for (u32 i = lid; i < 16; i += lsz)
+  {
+    w_s[i] = ikepsk_bufs[salt_pos].nr_buf[i];
+  }
+
+  barrier (CLK_LOCAL_MEM_FENCE);
+
+  __local u32 s_msg_buf[128];
+
+  for (u32 i = lid; i < 128; i += lsz)
+  {
+    s_msg_buf[i] = ikepsk_bufs[salt_pos].msg_buf[i];
+  }
+
+  barrier (CLK_LOCAL_MEM_FENCE);
+
+  if (gid >= gid_max) return;
 
   /**
    * base
    */
 
-  const u32 gid = get_global_id (0);
-
   u32 pw_buf0[4];
-
-  pw_buf0[0] = pws[gid].i[ 0];
-  pw_buf0[1] = pws[gid].i[ 1];
-  pw_buf0[2] = pws[gid].i[ 2];
-  pw_buf0[3] = pws[gid].i[ 3];
-
   u32 pw_buf1[4];
 
-  pw_buf1[0] = pws[gid].i[ 4];
-  pw_buf1[1] = pws[gid].i[ 5];
-  pw_buf1[2] = pws[gid].i[ 6];
-  pw_buf1[3] = pws[gid].i[ 7];
+  pw_buf0[0] = pws[gid].i[0];
+  pw_buf0[1] = pws[gid].i[1];
+  pw_buf0[2] = pws[gid].i[2];
+  pw_buf0[3] = pws[gid].i[3];
+  pw_buf1[0] = pws[gid].i[4];
+  pw_buf1[1] = pws[gid].i[5];
+  pw_buf1[2] = pws[gid].i[6];
+  pw_buf1[3] = pws[gid].i[7];
 
   const u32 pw_len = pws[gid].pw_len;
 
@@ -242,227 +258,173 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m05300_m04 (__glo
   const u32 nr_len  = ikepsk_bufs[salt_pos].nr_len;
   const u32 msg_len = ikepsk_bufs[salt_pos].msg_len;
 
-  __local u32 w_s[16];
-
-  if (lid < 16)
-  {
-    w_s[lid] = ikepsk_bufs[salt_pos].nr_buf[lid];
-  }
-
-  barrier (CLK_LOCAL_MEM_FENCE);
-
-  __local u32 s_msg_buf[128];
-
-  const u32 lid2 = lid * 2;
-
-  s_msg_buf[lid2 + 0] = ikepsk_bufs[salt_pos].msg_buf[lid2 + 0];
-  s_msg_buf[lid2 + 1] = ikepsk_bufs[salt_pos].msg_buf[lid2 + 1];
-
-  barrier (CLK_LOCAL_MEM_FENCE);
-
-  if (gid >= gid_max) return;
-
   /**
    * loop
    */
 
-  for (u32 il_pos = 0; il_pos < rules_cnt; il_pos++)
+  for (u32 il_pos = 0; il_pos < il_cnt; il_pos += VECT_SIZE)
   {
-    u32 w0[4];
+    u32x w0[4] = { 0 };
+    u32x w1[4] = { 0 };
+    u32x w2[4] = { 0 };
+    u32x w3[4] = { 0 };
 
-    w0[0] = pw_buf0[0];
-    w0[1] = pw_buf0[1];
-    w0[2] = pw_buf0[2];
-    w0[3] = pw_buf0[3];
-
-    u32 w1[4];
-
-    w1[0] = pw_buf1[0];
-    w1[1] = pw_buf1[1];
-    w1[2] = pw_buf1[2];
-    w1[3] = pw_buf1[3];
-
-    u32 w2[4];
-
-    w2[0] = 0;
-    w2[1] = 0;
-    w2[2] = 0;
-    w2[3] = 0;
-
-    u32 w3[4];
-
-    w3[0] = 0;
-    w3[1] = 0;
-    w3[2] = 0;
-    w3[3] = 0;
-
-    const u32 out_len = apply_rules (rules_buf[il_pos].cmds, w0, w1, pw_len);
+    apply_rules_vect (pw_buf0, pw_buf1, pw_len, rules_buf, il_pos, w0, w1);
 
     /**
      * pads
      */
 
-    u32 w0_t[4];
+    u32x ipad[4];
+    u32x opad[4];
 
-    w0_t[0] = w0[0];
-    w0_t[1] = w0[1];
-    w0_t[2] = w0[2];
-    w0_t[3] = w0[3];
+    hmac_md5_pad (w0, w1, w2, w3, ipad, opad);
 
-    u32 w1_t[4];
+    w0[0] = w_s[ 0];
+    w0[1] = w_s[ 1];
+    w0[2] = w_s[ 2];
+    w0[3] = w_s[ 3];
+    w1[0] = w_s[ 4];
+    w1[1] = w_s[ 5];
+    w1[2] = w_s[ 6];
+    w1[3] = w_s[ 7];
+    w2[0] = w_s[ 8];
+    w2[1] = w_s[ 9];
+    w2[2] = w_s[10];
+    w2[3] = w_s[11];
+    w3[0] = w_s[12];
+    w3[1] = w_s[13];
+    w3[2] = (64 + nr_len) * 8;
+    w3[3] = 0;
 
-    w1_t[0] = w1[0];
-    w1_t[1] = w1[1];
-    w1_t[2] = w1[2];
-    w1_t[3] = w1[3];
+    u32x digest[4];
 
-    u32 w2_t[4];
+    hmac_md5_run (w0, w1, w2, w3, ipad, opad, digest);
 
-    w2_t[0] = 0;
-    w2_t[1] = 0;
-    w2_t[2] = 0;
-    w2_t[3] = 0;
+    w0[0] = digest[0];
+    w0[1] = digest[1];
+    w0[2] = digest[2];
+    w0[3] = digest[3];
+    w1[0] = 0;
+    w1[1] = 0;
+    w1[2] = 0;
+    w1[3] = 0;
+    w2[0] = 0;
+    w2[1] = 0;
+    w2[2] = 0;
+    w2[3] = 0;
+    w3[0] = 0;
+    w3[1] = 0;
+    w3[2] = 0;
+    w3[3] = 0;
 
-    u32 w3_t[4];
-
-    w3_t[0] = 0;
-    w3_t[1] = 0;
-    w3_t[2] = 0;
-    w3_t[3] = 0;
-
-    u32 ipad[4];
-    u32 opad[4];
-
-    hmac_md5_pad (w0_t, w1_t, w2_t, w3_t, ipad, opad);
-
-    w0_t[0] = w_s[ 0];
-    w0_t[1] = w_s[ 1];
-    w0_t[2] = w_s[ 2];
-    w0_t[3] = w_s[ 3];
-    w1_t[0] = w_s[ 4];
-    w1_t[1] = w_s[ 5];
-    w1_t[2] = w_s[ 6];
-    w1_t[3] = w_s[ 7];
-    w2_t[0] = w_s[ 8];
-    w2_t[1] = w_s[ 9];
-    w2_t[2] = w_s[10];
-    w2_t[3] = w_s[11];
-    w3_t[0] = w_s[12];
-    w3_t[1] = w_s[13];
-    w3_t[2] = (64 + nr_len) * 8;
-    w3_t[3] = 0;
-
-    u32 digest[4];
-
-    hmac_md5_run (w0_t, w1_t, w2_t, w3_t, ipad, opad, digest);
-
-    w0_t[0] = digest[0];
-    w0_t[1] = digest[1];
-    w0_t[2] = digest[2];
-    w0_t[3] = digest[3];
-    w1_t[0] = 0;
-    w1_t[1] = 0;
-    w1_t[2] = 0;
-    w1_t[3] = 0;
-    w2_t[0] = 0;
-    w2_t[1] = 0;
-    w2_t[2] = 0;
-    w2_t[3] = 0;
-    w3_t[0] = 0;
-    w3_t[1] = 0;
-    w3_t[2] = 0;
-    w3_t[3] = 0;
-
-    hmac_md5_pad (w0_t, w1_t, w2_t, w3_t, ipad, opad);
+    hmac_md5_pad (w0, w1, w2, w3, ipad, opad);
 
     int left;
     int off;
 
     for (left = ikepsk_bufs[salt_pos].msg_len, off = 0; left >= 56; left -= 64, off += 16)
     {
-      w0_t[0] = s_msg_buf[off +  0];
-      w0_t[1] = s_msg_buf[off +  1];
-      w0_t[2] = s_msg_buf[off +  2];
-      w0_t[3] = s_msg_buf[off +  3];
-      w1_t[0] = s_msg_buf[off +  4];
-      w1_t[1] = s_msg_buf[off +  5];
-      w1_t[2] = s_msg_buf[off +  6];
-      w1_t[3] = s_msg_buf[off +  7];
-      w2_t[0] = s_msg_buf[off +  8];
-      w2_t[1] = s_msg_buf[off +  9];
-      w2_t[2] = s_msg_buf[off + 10];
-      w2_t[3] = s_msg_buf[off + 11];
-      w3_t[0] = s_msg_buf[off + 12];
-      w3_t[1] = s_msg_buf[off + 13];
-      w3_t[2] = s_msg_buf[off + 14];
-      w3_t[3] = s_msg_buf[off + 15];
+      w0[0] = s_msg_buf[off +  0];
+      w0[1] = s_msg_buf[off +  1];
+      w0[2] = s_msg_buf[off +  2];
+      w0[3] = s_msg_buf[off +  3];
+      w1[0] = s_msg_buf[off +  4];
+      w1[1] = s_msg_buf[off +  5];
+      w1[2] = s_msg_buf[off +  6];
+      w1[3] = s_msg_buf[off +  7];
+      w2[0] = s_msg_buf[off +  8];
+      w2[1] = s_msg_buf[off +  9];
+      w2[2] = s_msg_buf[off + 10];
+      w2[3] = s_msg_buf[off + 11];
+      w3[0] = s_msg_buf[off + 12];
+      w3[1] = s_msg_buf[off + 13];
+      w3[2] = s_msg_buf[off + 14];
+      w3[3] = s_msg_buf[off + 15];
 
-      md5_transform (w0_t, w1_t, w2_t, w3_t, ipad);
+      md5_transform (w0, w1, w2, w3, ipad);
     }
 
-    w0_t[0] = s_msg_buf[off +  0];
-    w0_t[1] = s_msg_buf[off +  1];
-    w0_t[2] = s_msg_buf[off +  2];
-    w0_t[3] = s_msg_buf[off +  3];
-    w1_t[0] = s_msg_buf[off +  4];
-    w1_t[1] = s_msg_buf[off +  5];
-    w1_t[2] = s_msg_buf[off +  6];
-    w1_t[3] = s_msg_buf[off +  7];
-    w2_t[0] = s_msg_buf[off +  8];
-    w2_t[1] = s_msg_buf[off +  9];
-    w2_t[2] = s_msg_buf[off + 10];
-    w2_t[3] = s_msg_buf[off + 11];
-    w3_t[0] = s_msg_buf[off + 12];
-    w3_t[1] = s_msg_buf[off + 13];
-    w3_t[2] = (64 + msg_len) * 8;
-    w3_t[3] = 0;
+    w0[0] = s_msg_buf[off +  0];
+    w0[1] = s_msg_buf[off +  1];
+    w0[2] = s_msg_buf[off +  2];
+    w0[3] = s_msg_buf[off +  3];
+    w1[0] = s_msg_buf[off +  4];
+    w1[1] = s_msg_buf[off +  5];
+    w1[2] = s_msg_buf[off +  6];
+    w1[3] = s_msg_buf[off +  7];
+    w2[0] = s_msg_buf[off +  8];
+    w2[1] = s_msg_buf[off +  9];
+    w2[2] = s_msg_buf[off + 10];
+    w2[3] = s_msg_buf[off + 11];
+    w3[0] = s_msg_buf[off + 12];
+    w3[1] = s_msg_buf[off + 13];
+    w3[2] = (64 + msg_len) * 8;
+    w3[3] = 0;
 
-    hmac_md5_run (w0_t, w1_t, w2_t, w3_t, ipad, opad, digest);
+    hmac_md5_run (w0, w1, w2, w3, ipad, opad, digest);
 
-    const u32 r0 = digest[0];
-    const u32 r1 = digest[3];
-    const u32 r2 = digest[2];
-    const u32 r3 = digest[1];
-
-    #include COMPARE_M
+    COMPARE_M_SIMD (digest[0], digest[3], digest[2], digest[1]);
   }
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m05300_m08 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 combs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m05300_m08 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m05300_m16 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 combs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m05300_m16 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m05300_s04 (__global pw_t *pws, __global kernel_rule_t *  rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m05300_s04 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * modifier
    */
 
+  const u32 gid = get_global_id (0);
   const u32 lid = get_local_id (0);
+  const u32 lsz = get_local_size (0);
+
+  /**
+   * s_msg
+   */
+
+  __local u32 w_s[16];
+
+  for (u32 i = lid; i < 16; i += lsz)
+  {
+    w_s[i] = ikepsk_bufs[salt_pos].nr_buf[i];
+  }
+
+  barrier (CLK_LOCAL_MEM_FENCE);
+
+  __local u32 s_msg_buf[128];
+
+  for (u32 i = lid; i < 128; i += lsz)
+  {
+    s_msg_buf[i] = ikepsk_bufs[salt_pos].msg_buf[i];
+  }
+
+  barrier (CLK_LOCAL_MEM_FENCE);
+
+  if (gid >= gid_max) return;
 
   /**
    * base
    */
 
-  const u32 gid = get_global_id (0);
-
   u32 pw_buf0[4];
-
-  pw_buf0[0] = pws[gid].i[ 0];
-  pw_buf0[1] = pws[gid].i[ 1];
-  pw_buf0[2] = pws[gid].i[ 2];
-  pw_buf0[3] = pws[gid].i[ 3];
-
   u32 pw_buf1[4];
 
-  pw_buf1[0] = pws[gid].i[ 4];
-  pw_buf1[1] = pws[gid].i[ 5];
-  pw_buf1[2] = pws[gid].i[ 6];
-  pw_buf1[3] = pws[gid].i[ 7];
+  pw_buf0[0] = pws[gid].i[0];
+  pw_buf0[1] = pws[gid].i[1];
+  pw_buf0[2] = pws[gid].i[2];
+  pw_buf0[3] = pws[gid].i[3];
+  pw_buf1[0] = pws[gid].i[4];
+  pw_buf1[1] = pws[gid].i[5];
+  pw_buf1[2] = pws[gid].i[6];
+  pw_buf1[3] = pws[gid].i[7];
 
   const u32 pw_len = pws[gid].pw_len;
 
@@ -472,26 +434,6 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m05300_s04 (__glo
 
   const u32 nr_len  = ikepsk_bufs[salt_pos].nr_len;
   const u32 msg_len = ikepsk_bufs[salt_pos].msg_len;
-
-  __local u32 w_s[16];
-
-  if (lid < 16)
-  {
-    w_s[lid] = ikepsk_bufs[salt_pos].nr_buf[lid];
-  }
-
-  barrier (CLK_LOCAL_MEM_FENCE);
-
-  __local u32 s_msg_buf[128];
-
-  const u32 lid2 = lid * 2;
-
-  s_msg_buf[lid2 + 0] = ikepsk_bufs[salt_pos].msg_buf[lid2 + 0];
-  s_msg_buf[lid2 + 1] = ikepsk_bufs[salt_pos].msg_buf[lid2 + 1];
-
-  barrier (CLK_LOCAL_MEM_FENCE);
-
-  if (gid >= gid_max) return;
 
   /**
    * digest
@@ -509,172 +451,116 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m05300_s04 (__glo
    * loop
    */
 
-  for (u32 il_pos = 0; il_pos < rules_cnt; il_pos++)
+  for (u32 il_pos = 0; il_pos < il_cnt; il_pos += VECT_SIZE)
   {
-    u32 w0[4];
+    u32x w0[4] = { 0 };
+    u32x w1[4] = { 0 };
+    u32x w2[4] = { 0 };
+    u32x w3[4] = { 0 };
 
-    w0[0] = pw_buf0[0];
-    w0[1] = pw_buf0[1];
-    w0[2] = pw_buf0[2];
-    w0[3] = pw_buf0[3];
-
-    u32 w1[4];
-
-    w1[0] = pw_buf1[0];
-    w1[1] = pw_buf1[1];
-    w1[2] = pw_buf1[2];
-    w1[3] = pw_buf1[3];
-
-    u32 w2[4];
-
-    w2[0] = 0;
-    w2[1] = 0;
-    w2[2] = 0;
-    w2[3] = 0;
-
-    u32 w3[4];
-
-    w3[0] = 0;
-    w3[1] = 0;
-    w3[2] = 0;
-    w3[3] = 0;
-
-    const u32 out_len = apply_rules (rules_buf[il_pos].cmds, w0, w1, pw_len);
+    apply_rules_vect (pw_buf0, pw_buf1, pw_len, rules_buf, il_pos, w0, w1);
 
     /**
      * pads
      */
 
-    u32 w0_t[4];
+    u32x ipad[4];
+    u32x opad[4];
 
-    w0_t[0] = w0[0];
-    w0_t[1] = w0[1];
-    w0_t[2] = w0[2];
-    w0_t[3] = w0[3];
+    hmac_md5_pad (w0, w1, w2, w3, ipad, opad);
 
-    u32 w1_t[4];
+    w0[0] = w_s[ 0];
+    w0[1] = w_s[ 1];
+    w0[2] = w_s[ 2];
+    w0[3] = w_s[ 3];
+    w1[0] = w_s[ 4];
+    w1[1] = w_s[ 5];
+    w1[2] = w_s[ 6];
+    w1[3] = w_s[ 7];
+    w2[0] = w_s[ 8];
+    w2[1] = w_s[ 9];
+    w2[2] = w_s[10];
+    w2[3] = w_s[11];
+    w3[0] = w_s[12];
+    w3[1] = w_s[13];
+    w3[2] = (64 + nr_len) * 8;
+    w3[3] = 0;
 
-    w1_t[0] = w1[0];
-    w1_t[1] = w1[1];
-    w1_t[2] = w1[2];
-    w1_t[3] = w1[3];
+    u32x digest[4];
 
-    u32 w2_t[4];
+    hmac_md5_run (w0, w1, w2, w3, ipad, opad, digest);
 
-    w2_t[0] = 0;
-    w2_t[1] = 0;
-    w2_t[2] = 0;
-    w2_t[3] = 0;
+    w0[0] = digest[0];
+    w0[1] = digest[1];
+    w0[2] = digest[2];
+    w0[3] = digest[3];
+    w1[0] = 0;
+    w1[1] = 0;
+    w1[2] = 0;
+    w1[3] = 0;
+    w2[0] = 0;
+    w2[1] = 0;
+    w2[2] = 0;
+    w2[3] = 0;
+    w3[0] = 0;
+    w3[1] = 0;
+    w3[2] = 0;
+    w3[3] = 0;
 
-    u32 w3_t[4];
-
-    w3_t[0] = 0;
-    w3_t[1] = 0;
-    w3_t[2] = 0;
-    w3_t[3] = 0;
-
-    u32 ipad[4];
-    u32 opad[4];
-
-    hmac_md5_pad (w0_t, w1_t, w2_t, w3_t, ipad, opad);
-
-    w0_t[0] = w_s[ 0];
-    w0_t[1] = w_s[ 1];
-    w0_t[2] = w_s[ 2];
-    w0_t[3] = w_s[ 3];
-    w1_t[0] = w_s[ 4];
-    w1_t[1] = w_s[ 5];
-    w1_t[2] = w_s[ 6];
-    w1_t[3] = w_s[ 7];
-    w2_t[0] = w_s[ 8];
-    w2_t[1] = w_s[ 9];
-    w2_t[2] = w_s[10];
-    w2_t[3] = w_s[11];
-    w3_t[0] = w_s[12];
-    w3_t[1] = w_s[13];
-    w3_t[2] = (64 + nr_len) * 8;
-    w3_t[3] = 0;
-
-    u32 digest[4];
-
-    hmac_md5_run (w0_t, w1_t, w2_t, w3_t, ipad, opad, digest);
-
-    w0_t[0] = digest[0];
-    w0_t[1] = digest[1];
-    w0_t[2] = digest[2];
-    w0_t[3] = digest[3];
-    w1_t[0] = 0;
-    w1_t[1] = 0;
-    w1_t[2] = 0;
-    w1_t[3] = 0;
-    w2_t[0] = 0;
-    w2_t[1] = 0;
-    w2_t[2] = 0;
-    w2_t[3] = 0;
-    w3_t[0] = 0;
-    w3_t[1] = 0;
-    w3_t[2] = 0;
-    w3_t[3] = 0;
-
-    hmac_md5_pad (w0_t, w1_t, w2_t, w3_t, ipad, opad);
+    hmac_md5_pad (w0, w1, w2, w3, ipad, opad);
 
     int left;
     int off;
 
     for (left = ikepsk_bufs[salt_pos].msg_len, off = 0; left >= 56; left -= 64, off += 16)
     {
-      w0_t[0] = s_msg_buf[off +  0];
-      w0_t[1] = s_msg_buf[off +  1];
-      w0_t[2] = s_msg_buf[off +  2];
-      w0_t[3] = s_msg_buf[off +  3];
-      w1_t[0] = s_msg_buf[off +  4];
-      w1_t[1] = s_msg_buf[off +  5];
-      w1_t[2] = s_msg_buf[off +  6];
-      w1_t[3] = s_msg_buf[off +  7];
-      w2_t[0] = s_msg_buf[off +  8];
-      w2_t[1] = s_msg_buf[off +  9];
-      w2_t[2] = s_msg_buf[off + 10];
-      w2_t[3] = s_msg_buf[off + 11];
-      w3_t[0] = s_msg_buf[off + 12];
-      w3_t[1] = s_msg_buf[off + 13];
-      w3_t[2] = s_msg_buf[off + 14];
-      w3_t[3] = s_msg_buf[off + 15];
+      w0[0] = s_msg_buf[off +  0];
+      w0[1] = s_msg_buf[off +  1];
+      w0[2] = s_msg_buf[off +  2];
+      w0[3] = s_msg_buf[off +  3];
+      w1[0] = s_msg_buf[off +  4];
+      w1[1] = s_msg_buf[off +  5];
+      w1[2] = s_msg_buf[off +  6];
+      w1[3] = s_msg_buf[off +  7];
+      w2[0] = s_msg_buf[off +  8];
+      w2[1] = s_msg_buf[off +  9];
+      w2[2] = s_msg_buf[off + 10];
+      w2[3] = s_msg_buf[off + 11];
+      w3[0] = s_msg_buf[off + 12];
+      w3[1] = s_msg_buf[off + 13];
+      w3[2] = s_msg_buf[off + 14];
+      w3[3] = s_msg_buf[off + 15];
 
-      md5_transform (w0_t, w1_t, w2_t, w3_t, ipad);
+      md5_transform (w0, w1, w2, w3, ipad);
     }
 
-    w0_t[0] = s_msg_buf[off +  0];
-    w0_t[1] = s_msg_buf[off +  1];
-    w0_t[2] = s_msg_buf[off +  2];
-    w0_t[3] = s_msg_buf[off +  3];
-    w1_t[0] = s_msg_buf[off +  4];
-    w1_t[1] = s_msg_buf[off +  5];
-    w1_t[2] = s_msg_buf[off +  6];
-    w1_t[3] = s_msg_buf[off +  7];
-    w2_t[0] = s_msg_buf[off +  8];
-    w2_t[1] = s_msg_buf[off +  9];
-    w2_t[2] = s_msg_buf[off + 10];
-    w2_t[3] = s_msg_buf[off + 11];
-    w3_t[0] = s_msg_buf[off + 12];
-    w3_t[1] = s_msg_buf[off + 13];
-    w3_t[2] = (64 + msg_len) * 8;
-    w3_t[3] = 0;
+    w0[0] = s_msg_buf[off +  0];
+    w0[1] = s_msg_buf[off +  1];
+    w0[2] = s_msg_buf[off +  2];
+    w0[3] = s_msg_buf[off +  3];
+    w1[0] = s_msg_buf[off +  4];
+    w1[1] = s_msg_buf[off +  5];
+    w1[2] = s_msg_buf[off +  6];
+    w1[3] = s_msg_buf[off +  7];
+    w2[0] = s_msg_buf[off +  8];
+    w2[1] = s_msg_buf[off +  9];
+    w2[2] = s_msg_buf[off + 10];
+    w2[3] = s_msg_buf[off + 11];
+    w3[0] = s_msg_buf[off + 12];
+    w3[1] = s_msg_buf[off + 13];
+    w3[2] = (64 + msg_len) * 8;
+    w3[3] = 0;
 
-    hmac_md5_run (w0_t, w1_t, w2_t, w3_t, ipad, opad, digest);
+    hmac_md5_run (w0, w1, w2, w3, ipad, opad, digest);
 
-    const u32 r0 = digest[0];
-    const u32 r1 = digest[3];
-    const u32 r2 = digest[2];
-    const u32 r3 = digest[1];
-
-    #include COMPARE_S
+    COMPARE_S_SIMD (digest[0], digest[3], digest[2], digest[1]);
   }
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m05300_s08 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 combs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m05300_s08 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m05300_s16 (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 combs_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m05300_s16 (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
 }

@@ -1,24 +1,18 @@
 /**
- * Author......: Jens Steube <jens.steube@gmail.com>
+ * Author......: See docs/credits.txt
  * License.....: MIT
  */
 
 #define _SHA512_
 
-#include "include/constants.h"
-#include "include/kernel_vendor.h"
+#include "inc_vendor.cl"
+#include "inc_hash_constants.h"
+#include "inc_hash_functions.cl"
+#include "inc_types.cl"
+#include "inc_common.cl"
 
-#define DGST_R0 0
-#define DGST_R1 1
-#define DGST_R2 2
-#define DGST_R3 3
-
-#include "include/kernel_functions.c"
-#include "OpenCL/types_ocl.c"
-#include "OpenCL/common.c"
-
-#define COMPARE_S "OpenCL/check_single_comp4.c"
-#define COMPARE_M "OpenCL/check_multi_comp4.c"
+#define COMPARE_S "inc_comp_single.cl"
+#define COMPARE_M "inc_comp_multi.cl"
 
 __constant u64 k_sha512[80] =
 {
@@ -114,7 +108,9 @@ static void sha512_transform (const u64 w[16], u64 dgst[8])
 
   ROUND_STEP (0);
 
-  //#pragma unroll
+  #ifdef _unroll
+  #pragma unroll
+  #endif
   for (int i = 16; i < 80; i += 16)
   {
     ROUND_EXPAND (); ROUND_STEP (i);
@@ -130,7 +126,7 @@ static void sha512_transform (const u64 w[16], u64 dgst[8])
   dgst[7] += h;
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07900_init (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global drupal7_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m07900_init (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global drupal7_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -233,7 +229,7 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07900_init (__gl
   tmps[gid].digest_buf[7] = digest[7];
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07900_loop (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global drupal7_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m07900_loop (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global drupal7_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * base
@@ -244,28 +240,22 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07900_loop (__gl
   if (gid >= gid_max) return;
 
   u32 w0[4];
+  u32 w1[4];
+  u32 w2[4];
+  u32 w3[4];
 
   w0[0] = pws[gid].i[ 0];
   w0[1] = pws[gid].i[ 1];
   w0[2] = pws[gid].i[ 2];
   w0[3] = pws[gid].i[ 3];
-
-  u32 w1[4];
-
   w1[0] = pws[gid].i[ 4];
   w1[1] = pws[gid].i[ 5];
   w1[2] = pws[gid].i[ 6];
   w1[3] = pws[gid].i[ 7];
-
-  u32 w2[4];
-
   w2[0] = pws[gid].i[ 8];
   w2[1] = pws[gid].i[ 9];
   w2[2] = pws[gid].i[10];
   w2[3] = pws[gid].i[11];
-
-  u32 w3[4];
-
   w3[0] = 0;
   w3[1] = 0;
   w3[2] = 0;
@@ -296,24 +286,14 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07900_loop (__gl
 
   u32 block_len = (64 + pw_len);
 
-  u64 w[16];
+  u64 w_t[6];
 
-  w[ 0] = 0;
-  w[ 1] = 0;
-  w[ 2] = 0;
-  w[ 3] = 0;
-  w[ 4] = 0;
-  w[ 5] = 0;
-  w[ 6] = 0;
-  w[ 7] = 0;
-  w[ 8] = ((u64) swap32 (w0[0])) << 32 | (u64) swap32 (w0[1]);
-  w[ 9] = ((u64) swap32 (w0[2])) << 32 | (u64) swap32 (w0[3]);
-  w[10] = ((u64) swap32 (w1[0])) << 32 | (u64) swap32 (w1[1]);
-  w[11] = ((u64) swap32 (w1[2])) << 32 | (u64) swap32 (w1[3]);
-  w[12] = ((u64) swap32 (w2[0])) << 32 | (u64) swap32 (w2[1]);
-  w[13] = ((u64) swap32 (w2[2])) << 32 | (u64) swap32 (w2[3]);
-  w[14] = 0;
-  w[15] = block_len * 8;
+  w_t[0] = ((u64) swap32 (w0[0])) << 32 | (u64) swap32 (w0[1]);
+  w_t[1] = ((u64) swap32 (w0[2])) << 32 | (u64) swap32 (w0[3]);
+  w_t[2] = ((u64) swap32 (w1[0])) << 32 | (u64) swap32 (w1[1]);
+  w_t[3] = ((u64) swap32 (w1[2])) << 32 | (u64) swap32 (w1[3]);
+  w_t[4] = ((u64) swap32 (w2[0])) << 32 | (u64) swap32 (w2[1]);
+  w_t[5] = ((u64) swap32 (w2[2])) << 32 | (u64) swap32 (w2[3]);
 
   /**
    * init
@@ -321,6 +301,8 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07900_loop (__gl
 
   for (u32 i = 0; i < loop_cnt; i++)
   {
+    u64 w[16];
+
     w[ 0] = digest[0];
     w[ 1] = digest[1];
     w[ 2] = digest[2];
@@ -329,6 +311,14 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07900_loop (__gl
     w[ 5] = digest[5];
     w[ 6] = digest[6];
     w[ 7] = digest[7];
+    w[ 8] = w_t[0];
+    w[ 9] = w_t[1];
+    w[10] = w_t[2];
+    w[11] = w_t[3];
+    w[12] = w_t[4];
+    w[13] = w_t[5];
+    w[14] = 0;
+    w[15] = block_len * 8;
 
     digest[0] = SHA512M_A;
     digest[1] = SHA512M_B;
@@ -352,7 +342,7 @@ __kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07900_loop (__gl
   tmps[gid].digest_buf[7] = digest[7];
 }
 
-__kernel void __attribute__((reqd_work_group_size (64, 1, 1))) m07900_comp (__global pw_t *pws, __global kernel_rule_t *rules_buf, __global comb_t *combs_buf, __global bf_t *bfs_buf, __global drupal7_tmp_t *tmps, __global void *hooks, __global u32 *bitmaps_buf_s1_a, __global u32 *bitmaps_buf_s1_b, __global u32 *bitmaps_buf_s1_c, __global u32 *bitmaps_buf_s1_d, __global u32 *bitmaps_buf_s2_a, __global u32 *bitmaps_buf_s2_b, __global u32 *bitmaps_buf_s2_c, __global u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global digest_t *digests_buf, __global u32 *hashes_shown, __global salt_t *salt_bufs, __global void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 rules_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
+__kernel void m07900_comp (__global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global drupal7_tmp_t *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global const void *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, const u32 combs_mode, const u32 gid_max)
 {
   /**
    * modifier

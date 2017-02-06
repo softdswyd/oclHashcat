@@ -1,47 +1,37 @@
-oclHashcat v2.10
-================
+hashcat v3.40
+=============
 
-NV users require ForceWare 346.59 or later (recommended 358.09 or later)
-AMD users require Catalyst 14.9 or later (recommended 15.9 or later)
+AMD users on Windows require "AMD Radeon Software Crimson Edition" (15.12 or later)
+AMD users on Linux require "AMDGPU-Pro Driver" (16.40 or later)
+Intel CPU users require "OpenCL Runtime for Intel Core and Intel Xeon Processors" (16.1.1 or later)
+Intel GPU on Windows users require "OpenCL Driver for Intel Iris and Intel HD Graphics"
+Intel GPU on Linux users require "OpenCL 2.0 GPU Driver Package for Linux" (2.0 or later)
+NVidia users require "NVIDIA Driver" (367.x or later)
 
 ##
 ## Features
 ##
 
 - World's fastest password cracker
-- World's first and only GPGPU-based rule engine
+- World's first and only in-kernel rule engine
 - Free
-- Open-Source
-- Multi-GPU (up to 128 GPUs)
-- Multi-Hash (up to 100 million hashes at once)
-- Multi-OS (Linux & Windows native binaries)
-- Multi-Platform (OpenCL support)
-- Multi-Algorithm (see below)
-- Low resource utilization; you can still watch movies or play games while cracking
-- Focuses on highly iterated modern hashes
-- Focuses on dictionary-based attacks
-- Supports distributed cracking
-- Supports pause / resume while cracking
+- Open-Source (MIT License)
+- Multi-OS (Linux, Windows and OSX)
+- Multi-Platform (CPU, GPU, DSP, FPGA, etc., everything that comes with an OpenCL runtime)
+- Multi-Hash (Cracking multiple hashes at the same time)
+- Multi-Devices (Utilizing multiple devices in same system)
+- Multi-Device-Types (Utilizing mixed device types in same system)
+- Supports distributed cracking networks (using overlay)
+- Supports interactive pause / resume
 - Supports sessions
 - Supports restore
-- Supports reading words from file and stdin
+- Supports reading password candidates from file and stdin
 - Supports hex-salt and hex-charset
+- Supports automatic performance tuning
+- Supports automatic keyspace ordering markov-chains
 - Built-in benchmarking system
 - Integrated thermal watchdog
-- 150+ Hash-types implemented with performance in mind
-- ... and much more
-
-##
-## Attack-Modes
-##
-
-- Straight *
-- Combination
-- Brute-force
-- Hybrid dict + mask
-- Hybrid mask + dict
-
-* = Supports rules
+- 160+ Hash-types implemented with performance in mind
 
 ##
 ## Hash-Types
@@ -51,32 +41,40 @@ AMD users require Catalyst 14.9 or later (recommended 15.9 or later)
 - MD5
 - Half MD5 (left, mid, right)
 - SHA1
+- SHA-224
 - SHA-256
 - SHA-384
 - SHA-512
 - SHA-3 (Keccak)
 - SipHash
+- Skip32
 - RipeMD160
 - Whirlpool
+- DES (PT = $salt, key = $pass)
+- 3DES (PT = $salt, key = $pass)
 - GOST R 34.11-94
 - GOST R 34.11-2012 (Streebog) 256-bit
 - GOST R 34.11-2012 (Streebog) 512-bit
-- Double MD5
-- Double SHA1
 - md5($pass.$salt)
 - md5($salt.$pass)
 - md5(unicode($pass).$salt)
 - md5($salt.unicode($pass))
-- md5(sha1($pass))
-- md5($salt.md5($pass))
 - md5($salt.$pass.$salt)
+- md5($salt.md5($pass))
+- md5($salt.md5($salt.$pass))
+- md5($salt.md5($pass.$salt))
+- md5(md5($pass))
 - md5(strtoupper(md5($pass)))
+- md5(sha1($pass))
 - sha1($pass.$salt)
 - sha1($salt.$pass)
 - sha1(unicode($pass).$salt)
 - sha1($salt.unicode($pass))
+- sha1(sha1($pass))
+- sha1($salt.sha1($pass))
 - sha1(md5($pass))
 - sha1($salt.$pass.$salt)
+- sha1(CX)
 - sha256($pass.$salt)
 - sha256($salt.$pass)
 - sha256(unicode($pass).$salt)
@@ -138,7 +136,9 @@ AMD users require Catalyst 14.9 or later (recommended 15.9 or later)
 - NetNTLMv1 + ESS
 - NetNTLMv2
 - Kerberos 5 AS-REQ Pre-Auth etype 23
+- Kerberos 5 TGS-REP etype 23
 - Netscape LDAP SHA/SSHA
+- FileZilla Server
 - LM
 - NTLM
 - Domain Cached Credentials (DCC), MS Cache
@@ -158,6 +158,8 @@ AMD users require Catalyst 14.9 or later (recommended 15.9 or later)
 - OSX v10.8
 - OSX v10.9
 - OSX v10.10
+- iTunes Backup < 10.0
+- iTunes Backup >= 10.0
 - AIX {smd5}
 - AIX {ssha1}
 - AIX {ssha256}
@@ -169,21 +171,29 @@ AMD users require Catalyst 14.9 or later (recommended 15.9 or later)
 - Cisco $9$
 - Juniper IVE
 - Juniper Netscreen/SSG (ScreenOS)
+- Fortigate (FortiOS)
 - Android PIN
+- Windows 8+ phone PIN/Password
 - GRUB 2
 - CRC32
 - RACF
 - Radmin2
 - Redmine
+- PunBB
+- OpenCart
 - Citrix Netscaler
 - SAP CODVN B (BCODE)
 - SAP CODVN F/G (PASSCODE)
 - SAP CODVN H (PWDSALTEDHASH) iSSHA-1
 - PeopleSoft
+- PeopleSoft PS_TOKEN
 - Skype
+- WinZip
 - 7-Zip
 - RAR3-hp
 - RAR5
+- AxCrypt
+- AxCrypt in memory SHA1
 - PDF 1.1 - 1.3 (Acrobat 2 - 4)
 - PDF 1.4 - 1.6 (Acrobat 5 - 8)
 - PDF 1.7 Level 3 (Acrobat 9)
@@ -203,22 +213,45 @@ AMD users require Catalyst 14.9 or later (recommended 15.9 or later)
 - Lastpass
 - Password Safe v2
 - Password Safe v3
+- Keepass 1 (AES/Twofish) and Keepass 2 (AES)
+- Plaintext
 - eCryptfs
 - Android FDE <= 4.3
 - Android FDE (Samsung DEK)
-- TrueCrypt 5.0+
+- TrueCrypt
+- VeraCrypt
+- LUKS
 
 ##
-## Tested OS's
+## Attack-Modes
 ##
 
-- All Windows and Linux versions should work on both 32 and 64 bit
+- Straight *
+- Combination
+- Brute-force
+- Hybrid dict + mask
+- Hybrid mask + dict
+
+* = Supports rules
 
 ##
-## Tested GPU's
+## Supported OpenCL runtimes
 ##
 
-- All NVidia CUDA enabled cards >= sm_20
-- All AMD OpenCL enabled cards >= HD 5000
+- AMD
+- Apple
+- Intel
+- Mesa (Gallium)
+- NVidia
+- pocl
 
-To get started, run the example scripts or check out docs/user_manuals.txt
+##
+## Supported OpenCL device types
+##
+
+- GPU
+- CPU
+- APU
+- DSP
+- FPGA
+- Coprocessor
