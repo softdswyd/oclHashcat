@@ -8,7 +8,7 @@
 
 static const char *USAGE_MINI[] =
 {
-  "Usage: %s [options]... hash|hashfile|hccapfile [dictionary|mask|directory]...",
+  "Usage: %s [options]... hash|hashfile|hccapxfile [dictionary|mask|directory]...",
   "",
   "Try --help for more help.",
   NULL
@@ -18,7 +18,7 @@ static const char *USAGE_BIG[] =
 {
   "%s, advanced password recovery",
   "",
-  "Usage: %s [options]... hash|hashfile|hccapfile [dictionary|mask|directory]...",
+  "Usage: %s [options]... hash|hashfile|hccapxfile [dictionary|mask|directory]...",
   "",
   "- [ Options ] -",
   "",
@@ -66,6 +66,8 @@ static const char *USAGE_BIG[] =
   "     --induction-dir           | Dir  | Specify the induction directory to use for loopback  | --induction=inducts",
   "     --outfile-check-dir       | Dir  | Specify the outfile directory to monitor for plains  | --outfile-check-dir=x",
   "     --logfile-disable         |      | Disable the logfile                                  |",
+  "     --hccapx-message-pair     | Num  | Load only message pairs from hccapx matching X       | --hccapx-message-pair=2",
+  "     --nonce-error-corrections | Num  | The BF size range to replace AP's nonce last bytes   | --nonce-error-corrections=16",
   "     --truecrypt-keyfiles      | File | Keyfiles used, separate with comma                   | --truecrypt-key=x.png",
   "     --veracrypt-keyfiles      | File | Keyfiles used, separate with comma                   | --veracrypt-key=x.txt",
   "     --veracrypt-pim           | Num  | VeraCrypt personal iterations multiplier             | --veracrypt-pim=1000",
@@ -136,6 +138,7 @@ static const char *USAGE_BIG[] =
   "   4010 | md5($salt.md5($salt.$pass))                      | Raw Hash, Salted and / or Iterated",
   "   4110 | md5($salt.md5($pass.$salt))                      | Raw Hash, Salted and / or Iterated",
   "   2600 | md5(md5($pass))                                  | Raw Hash, Salted and / or Iterated",
+  "   3910 | md5(md5($pass).md5($salt))                       | Raw Hash, Salted and / or Iterated",
   "   4300 | md5(strtoupper(md5($pass)))                      | Raw Hash, Salted and / or Iterated",
   "   4400 | md5(sha1($pass))                                 | Raw Hash, Salted and / or Iterated",
   "    110 | sha1($pass.$salt)                                | Raw Hash, Salted and / or Iterated",
@@ -209,6 +212,7 @@ static const char *USAGE_BIG[] =
   "  13900 | OpenCart                                         | Forums, CMS, E-Commerce, Frameworks",
   "   4521 | Redmine                                          | Forums, CMS, E-Commerce, Frameworks",
   "   4522 | PunBB                                            | Forums, CMS, E-Commerce, Frameworks",
+  "  12001 | Atlassian (PBKDF2-HMAC-SHA1)                     | Forums, CMS, E-Commerce, Frameworks",
   "     12 | PostgreSQL                                       | Database Server",
   "    131 | MSSQL(2000)                                      | Database Server",
   "    132 | MSSQL(2005)                                      | Database Server",

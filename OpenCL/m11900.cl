@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _PBKDF2_MD5_
-
 #define NEW_SIMD_CODE
 
 #include "inc_vendor.cl"
@@ -17,7 +15,7 @@
 #define COMPARE_S "inc_comp_single.cl"
 #define COMPARE_M "inc_comp_multi.cl"
 
-static void md5_transform_S (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[4])
+void md5_transform_S (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[4])
 {
   u32 a = digest[0];
   u32 b = digest[1];
@@ -115,7 +113,7 @@ static void md5_transform_S (const u32 w0[4], const u32 w1[4], const u32 w2[4], 
   digest[3] += d;
 }
 
-static void hmac_md5_pad_S (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[4], u32 opad[4])
+void hmac_md5_pad_S (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[4], u32 opad[4])
 {
   w0[0] = w0[0] ^ 0x36363636;
   w0[1] = w0[1] ^ 0x36363636;
@@ -166,7 +164,7 @@ static void hmac_md5_pad_S (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad
   md5_transform_S (w0, w1, w2, w3, opad);
 }
 
-static void hmac_md5_run_S (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[4], u32 opad[4], u32 digest[4])
+void hmac_md5_run_S (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[4], u32 opad[4], u32 digest[4])
 {
   digest[0] = ipad[0];
   digest[1] = ipad[1];
@@ -200,7 +198,7 @@ static void hmac_md5_run_S (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad
   md5_transform_S (w0, w1, w2, w3, digest);
 }
 
-static void md5_transform_V (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[4])
+void md5_transform_V (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[4])
 {
   u32x a = digest[0];
   u32x b = digest[1];
@@ -298,7 +296,7 @@ static void md5_transform_V (const u32x w0[4], const u32x w1[4], const u32x w2[4
   digest[3] += d;
 }
 
-static void hmac_md5_pad_V (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4])
+void hmac_md5_pad_V (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4])
 {
   w0[0] = w0[0] ^ 0x36363636;
   w0[1] = w0[1] ^ 0x36363636;
@@ -349,7 +347,7 @@ static void hmac_md5_pad_V (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x
   md5_transform_V (w0, w1, w2, w3, opad);
 }
 
-static void hmac_md5_run_V (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4], u32x digest[4])
+void hmac_md5_run_V (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4], u32x digest[4])
 {
   digest[0] = ipad[0];
   digest[1] = ipad[1];
@@ -432,20 +430,20 @@ __kernel void m11900_init (__global pw_t *pws, __global const kernel_rule_t *rul
   u32 esalt_buf2[4];
   u32 esalt_buf3[4];
 
-  esalt_buf0[0] = esalt_bufs[salt_pos].salt_buf[ 0];
-  esalt_buf0[1] = esalt_bufs[salt_pos].salt_buf[ 1];
-  esalt_buf0[2] = esalt_bufs[salt_pos].salt_buf[ 2];
-  esalt_buf0[3] = esalt_bufs[salt_pos].salt_buf[ 3];
-  esalt_buf1[0] = esalt_bufs[salt_pos].salt_buf[ 4];
-  esalt_buf1[1] = esalt_bufs[salt_pos].salt_buf[ 5];
-  esalt_buf1[2] = esalt_bufs[salt_pos].salt_buf[ 6];
-  esalt_buf1[3] = esalt_bufs[salt_pos].salt_buf[ 7];
-  esalt_buf2[0] = esalt_bufs[salt_pos].salt_buf[ 8];
-  esalt_buf2[1] = esalt_bufs[salt_pos].salt_buf[ 9];
-  esalt_buf2[2] = esalt_bufs[salt_pos].salt_buf[10];
-  esalt_buf2[3] = esalt_bufs[salt_pos].salt_buf[11];
-  esalt_buf3[0] = esalt_bufs[salt_pos].salt_buf[12];
-  esalt_buf3[1] = esalt_bufs[salt_pos].salt_buf[13];
+  esalt_buf0[0] = esalt_bufs[digests_offset].salt_buf[ 0];
+  esalt_buf0[1] = esalt_bufs[digests_offset].salt_buf[ 1];
+  esalt_buf0[2] = esalt_bufs[digests_offset].salt_buf[ 2];
+  esalt_buf0[3] = esalt_bufs[digests_offset].salt_buf[ 3];
+  esalt_buf1[0] = esalt_bufs[digests_offset].salt_buf[ 4];
+  esalt_buf1[1] = esalt_bufs[digests_offset].salt_buf[ 5];
+  esalt_buf1[2] = esalt_bufs[digests_offset].salt_buf[ 6];
+  esalt_buf1[3] = esalt_bufs[digests_offset].salt_buf[ 7];
+  esalt_buf2[0] = esalt_bufs[digests_offset].salt_buf[ 8];
+  esalt_buf2[1] = esalt_bufs[digests_offset].salt_buf[ 9];
+  esalt_buf2[2] = esalt_bufs[digests_offset].salt_buf[10];
+  esalt_buf2[3] = esalt_bufs[digests_offset].salt_buf[11];
+  esalt_buf3[0] = esalt_bufs[digests_offset].salt_buf[12];
+  esalt_buf3[1] = esalt_bufs[digests_offset].salt_buf[13];
   esalt_buf3[2] = (64 + salt_len + 4) * 8;
   esalt_buf3[3] = 0;
 

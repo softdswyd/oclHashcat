@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _NETNTLMV2_
-
 #define NEW_SIMD_CODE
 
 #include "inc_vendor.cl"
@@ -16,7 +14,7 @@
 #include "inc_rp.cl"
 #include "inc_simd.cl"
 
-static void md4_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[4])
+void md4_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[4])
 {
   u32x a = digest[0];
   u32x b = digest[1];
@@ -97,7 +95,7 @@ static void md4_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4],
   digest[3] += d;
 }
 
-static void md5_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[4])
+void md5_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[4])
 {
   u32x a = digest[0];
   u32x b = digest[1];
@@ -195,7 +193,7 @@ static void md5_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4],
   digest[3] += d;
 }
 
-static void hmac_md5_pad (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4])
+void hmac_md5_pad (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4])
 {
   w0[0] = w0[0] ^ 0x36363636;
   w0[1] = w0[1] ^ 0x36363636;
@@ -246,7 +244,7 @@ static void hmac_md5_pad (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x i
   md5_transform (w0, w1, w2, w3, opad);
 }
 
-static void hmac_md5_run (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4], u32x digest[4])
+void hmac_md5_run (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4], u32x digest[4])
 {
   digest[0] = ipad[0];
   digest[1] = ipad[1];
@@ -298,25 +296,25 @@ __kernel void m05600_m04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 64; i += lsz)
   {
-    s_userdomain_buf[i] = netntlm_bufs[salt_pos].userdomain_buf[i];
+    s_userdomain_buf[i] = netntlm_bufs[digests_offset].userdomain_buf[i];
   }
 
   __local u32 s_chall_buf[256];
 
   for (u32 i = lid; i < 256; i += lsz)
   {
-    s_chall_buf[i] = netntlm_bufs[salt_pos].chall_buf[i];
+    s_chall_buf[i] = netntlm_bufs[digests_offset].chall_buf[i];
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
 
   if (gid >= gid_max) return;
 
-  const u32 userdomain_len = netntlm_bufs[salt_pos].user_len
-                           + netntlm_bufs[salt_pos].domain_len;
+  const u32 userdomain_len = netntlm_bufs[digests_offset].user_len
+                           + netntlm_bufs[digests_offset].domain_len;
 
-  const u32 chall_len = netntlm_bufs[salt_pos].srvchall_len
-                      + netntlm_bufs[salt_pos].clichall_len;
+  const u32 chall_len = netntlm_bufs[digests_offset].srvchall_len
+                      + netntlm_bufs[digests_offset].clichall_len;
 
   /**
    * base
@@ -537,25 +535,25 @@ __kernel void m05600_s04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 64; i += lsz)
   {
-    s_userdomain_buf[i] = netntlm_bufs[salt_pos].userdomain_buf[i];
+    s_userdomain_buf[i] = netntlm_bufs[digests_offset].userdomain_buf[i];
   }
 
   __local u32 s_chall_buf[256];
 
   for (u32 i = lid; i < 256; i += lsz)
   {
-    s_chall_buf[i] = netntlm_bufs[salt_pos].chall_buf[i];
+    s_chall_buf[i] = netntlm_bufs[digests_offset].chall_buf[i];
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
 
   if (gid >= gid_max) return;
 
-  const u32 userdomain_len = netntlm_bufs[salt_pos].user_len
-                           + netntlm_bufs[salt_pos].domain_len;
+  const u32 userdomain_len = netntlm_bufs[digests_offset].user_len
+                           + netntlm_bufs[digests_offset].domain_len;
 
-  const u32 chall_len = netntlm_bufs[salt_pos].srvchall_len
-                      + netntlm_bufs[salt_pos].clichall_len;
+  const u32 chall_len = netntlm_bufs[digests_offset].srvchall_len
+                      + netntlm_bufs[digests_offset].clichall_len;
 
   /**
    * base

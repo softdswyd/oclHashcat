@@ -256,8 +256,6 @@ char **scan_directory (const char *path)
 
   files[num_files] = NULL;
 
-  num_files++;
-
   hcfree (tmp_path);
 
   return (files);
@@ -278,7 +276,9 @@ int folder_config_init (hashcat_ctx_t *hashcat_ctx, MAYBE_UNUSED const char *ins
 
   if (getcwd (cwd, HCBUFSIZ_TINY - 1) == NULL)
   {
-    event_log_error (hashcat_ctx, "getcwd(): %m");
+    event_log_error (hashcat_ctx, "getcwd(): %s", strerror (errno));
+
+    hcfree (cwd);
 
     return -1;
   }
@@ -297,10 +297,14 @@ int folder_config_init (hashcat_ctx_t *hashcat_ctx, MAYBE_UNUSED const char *ins
   {
     event_log_error (hashcat_ctx, "get_exec_path() failed");
 
+    hcfree (cwd);
+
+    hcfree (exec_path);
+
     return -1;
   }
 
-  #if defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined (__CYGWIN__)
+  #if defined (_POSIX)
 
   static const char SLASH[] = "/";
 
@@ -315,7 +319,13 @@ int folder_config_init (hashcat_ctx_t *hashcat_ctx, MAYBE_UNUSED const char *ins
   This causes invalid error out if install_folder (/usr/local/bin) does not exist
   if (resolved_install_folder == NULL)
   {
-    event_log_error (hashcat_ctx, "%s: %m", resolved_install_folder);
+    event_log_error (hashcat_ctx, "%s: %s", resolved_install_folder, strerror (errno));
+
+    hcfree (cwd);
+
+    hcfree (exec_path);
+
+    hcfree (resolved_install_folder);
 
     return -1;
   }
@@ -323,7 +333,13 @@ int folder_config_init (hashcat_ctx_t *hashcat_ctx, MAYBE_UNUSED const char *ins
 
   if (resolved_exec_path == NULL)
   {
-    event_log_error (hashcat_ctx, "%s: %m", resolved_exec_path);
+    event_log_error (hashcat_ctx, "%s: %s", resolved_exec_path, strerror (errno));
+
+    hcfree (cwd);
+
+    hcfree (exec_path);
+
+    hcfree (resolved_install_folder);
 
     return -1;
   }
@@ -401,6 +417,8 @@ int folder_config_init (hashcat_ctx_t *hashcat_ctx, MAYBE_UNUSED const char *ins
   {
     event_log_error (hashcat_ctx, "%s: %s", cpath, "GetFullPathName()");
 
+    hcfree (cwd);
+
     return -1;
   }
 
@@ -412,7 +430,14 @@ int folder_config_init (hashcat_ctx_t *hashcat_ctx, MAYBE_UNUSED const char *ins
 
   if (realpath (cpath, cpath_real) == NULL)
   {
-    event_log_error (hashcat_ctx, "%s: %m", cpath);
+    event_log_error (hashcat_ctx, "%s: %s", cpath, strerror (errno));
+
+    hcfree (cwd);
+
+    hcfree (shared_dir);
+    hcfree (profile_dir);
+    hcfree (cpath_real);
+    hcfree (session_dir);
 
     return -1;
   }

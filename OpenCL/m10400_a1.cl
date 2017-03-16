@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _MD5_
-
 //too much register pressure
 //#define NEW_SIMD_CODE
 
@@ -35,7 +33,7 @@ typedef struct
 
 } RC4_KEY;
 
-static void swap (__local RC4_KEY *rc4_key, const u8 i, const u8 j)
+void swap (__local RC4_KEY *rc4_key, const u8 i, const u8 j)
 {
   u8 tmp;
 
@@ -44,7 +42,7 @@ static void swap (__local RC4_KEY *rc4_key, const u8 i, const u8 j)
   rc4_key->S[j] = tmp;
 }
 
-static void rc4_init_16 (__local RC4_KEY *rc4_key, const u32 data[4])
+void rc4_init_16 (__local RC4_KEY *rc4_key, const u32 data[4])
 {
   u32 v = 0x03020100;
   u32 a = 0x04040404;
@@ -82,7 +80,7 @@ static void rc4_init_16 (__local RC4_KEY *rc4_key, const u32 data[4])
   j += rc4_key->S[255] + d0; swap (rc4_key, 255, j);
 }
 
-static u8 rc4_next_16 (__local RC4_KEY *rc4_key, u8 i, u8 j, __constant u32 *in, u32 out[4])
+u8 rc4_next_16 (__local RC4_KEY *rc4_key, u8 i, u8 j, __constant u32 *in, u32 out[4])
 {
   #ifdef _unroll
   #pragma unroll
@@ -135,7 +133,7 @@ static u8 rc4_next_16 (__local RC4_KEY *rc4_key, u8 i, u8 j, __constant u32 *in,
   return j;
 }
 
-static void md5_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[4])
+void md5_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[4])
 {
   u32 a = digest[0];
   u32 b = digest[1];
@@ -277,23 +275,23 @@ __kernel void m10400_m04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   u32 o_buf[8];
 
-  o_buf[0] = pdf_bufs[salt_pos].o_buf[0];
-  o_buf[1] = pdf_bufs[salt_pos].o_buf[1];
-  o_buf[2] = pdf_bufs[salt_pos].o_buf[2];
-  o_buf[3] = pdf_bufs[salt_pos].o_buf[3];
-  o_buf[4] = pdf_bufs[salt_pos].o_buf[4];
-  o_buf[5] = pdf_bufs[salt_pos].o_buf[5];
-  o_buf[6] = pdf_bufs[salt_pos].o_buf[6];
-  o_buf[7] = pdf_bufs[salt_pos].o_buf[7];
+  o_buf[0] = pdf_bufs[digests_offset].o_buf[0];
+  o_buf[1] = pdf_bufs[digests_offset].o_buf[1];
+  o_buf[2] = pdf_bufs[digests_offset].o_buf[2];
+  o_buf[3] = pdf_bufs[digests_offset].o_buf[3];
+  o_buf[4] = pdf_bufs[digests_offset].o_buf[4];
+  o_buf[5] = pdf_bufs[digests_offset].o_buf[5];
+  o_buf[6] = pdf_bufs[digests_offset].o_buf[6];
+  o_buf[7] = pdf_bufs[digests_offset].o_buf[7];
 
-  u32 P = pdf_bufs[salt_pos].P;
+  u32 P = pdf_bufs[digests_offset].P;
 
   u32 id_buf[4];
 
-  id_buf[0] = pdf_bufs[salt_pos].id_buf[0];
-  id_buf[1] = pdf_bufs[salt_pos].id_buf[1];
-  id_buf[2] = pdf_bufs[salt_pos].id_buf[2];
-  id_buf[3] = pdf_bufs[salt_pos].id_buf[3];
+  id_buf[0] = pdf_bufs[digests_offset].id_buf[0];
+  id_buf[1] = pdf_bufs[digests_offset].id_buf[1];
+  id_buf[2] = pdf_bufs[digests_offset].id_buf[2];
+  id_buf[3] = pdf_bufs[digests_offset].id_buf[3];
 
   /**
    * loop
@@ -513,23 +511,23 @@ __kernel void m10400_s04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   u32 o_buf[8];
 
-  o_buf[0] = pdf_bufs[salt_pos].o_buf[0];
-  o_buf[1] = pdf_bufs[salt_pos].o_buf[1];
-  o_buf[2] = pdf_bufs[salt_pos].o_buf[2];
-  o_buf[3] = pdf_bufs[salt_pos].o_buf[3];
-  o_buf[4] = pdf_bufs[salt_pos].o_buf[4];
-  o_buf[5] = pdf_bufs[salt_pos].o_buf[5];
-  o_buf[6] = pdf_bufs[salt_pos].o_buf[6];
-  o_buf[7] = pdf_bufs[salt_pos].o_buf[7];
+  o_buf[0] = pdf_bufs[digests_offset].o_buf[0];
+  o_buf[1] = pdf_bufs[digests_offset].o_buf[1];
+  o_buf[2] = pdf_bufs[digests_offset].o_buf[2];
+  o_buf[3] = pdf_bufs[digests_offset].o_buf[3];
+  o_buf[4] = pdf_bufs[digests_offset].o_buf[4];
+  o_buf[5] = pdf_bufs[digests_offset].o_buf[5];
+  o_buf[6] = pdf_bufs[digests_offset].o_buf[6];
+  o_buf[7] = pdf_bufs[digests_offset].o_buf[7];
 
-  u32 P = pdf_bufs[salt_pos].P;
+  u32 P = pdf_bufs[digests_offset].P;
 
   u32 id_buf[4];
 
-  id_buf[0] = pdf_bufs[salt_pos].id_buf[0];
-  id_buf[1] = pdf_bufs[salt_pos].id_buf[1];
-  id_buf[2] = pdf_bufs[salt_pos].id_buf[2];
-  id_buf[3] = pdf_bufs[salt_pos].id_buf[3];
+  id_buf[0] = pdf_bufs[digests_offset].id_buf[0];
+  id_buf[1] = pdf_bufs[digests_offset].id_buf[1];
+  id_buf[2] = pdf_bufs[digests_offset].id_buf[2];
+  id_buf[3] = pdf_bufs[digests_offset].id_buf[3];
 
   /**
    * digest

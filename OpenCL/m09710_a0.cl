@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _OLDOFFICE01_
-
 //too much register pressure
 //#define NEW_SIMD_CODE
 
@@ -25,7 +23,7 @@ typedef struct
 
 } RC4_KEY;
 
-static void swap (__local RC4_KEY *rc4_key, const u8 i, const u8 j)
+void swap (__local RC4_KEY *rc4_key, const u8 i, const u8 j)
 {
   u8 tmp;
 
@@ -34,7 +32,7 @@ static void swap (__local RC4_KEY *rc4_key, const u8 i, const u8 j)
   rc4_key->S[j] = tmp;
 }
 
-static void rc4_init_16 (__local RC4_KEY *rc4_key, const u32 data[4])
+void rc4_init_16 (__local RC4_KEY *rc4_key, const u32 data[4])
 {
   u32 v = 0x03020100;
   u32 a = 0x04040404;
@@ -87,7 +85,7 @@ static void rc4_init_16 (__local RC4_KEY *rc4_key, const u32 data[4])
   }
 }
 
-static u8 rc4_next_16 (__local RC4_KEY *rc4_key, u8 i, u8 j, const u32 in[4], u32 out[4])
+u8 rc4_next_16 (__local RC4_KEY *rc4_key, u8 i, u8 j, const u32 in[4], u32 out[4])
 {
   #ifdef _unroll
   #pragma unroll
@@ -140,7 +138,7 @@ static u8 rc4_next_16 (__local RC4_KEY *rc4_key, u8 i, u8 j, const u32 in[4], u3
   return j;
 }
 
-static void md5_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[4])
+void md5_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[4])
 {
   u32 a = digest[0];
   u32 b = digest[1];
@@ -280,14 +278,14 @@ __kernel void m09710_m04 (__global pw_t *pws, __global const kernel_rule_t *rule
    * esalt
    */
 
-  const u32 version = oldoffice01_bufs[salt_pos].version;
+  const u32 version = oldoffice01_bufs[digests_offset].version;
 
   u32 encryptedVerifier[4];
 
-  encryptedVerifier[0] = oldoffice01_bufs[salt_pos].encryptedVerifier[0];
-  encryptedVerifier[1] = oldoffice01_bufs[salt_pos].encryptedVerifier[1];
-  encryptedVerifier[2] = oldoffice01_bufs[salt_pos].encryptedVerifier[2];
-  encryptedVerifier[3] = oldoffice01_bufs[salt_pos].encryptedVerifier[3];
+  encryptedVerifier[0] = oldoffice01_bufs[digests_offset].encryptedVerifier[0];
+  encryptedVerifier[1] = oldoffice01_bufs[digests_offset].encryptedVerifier[1];
+  encryptedVerifier[2] = oldoffice01_bufs[digests_offset].encryptedVerifier[2];
+  encryptedVerifier[3] = oldoffice01_bufs[digests_offset].encryptedVerifier[3];
 
   /**
    * loop
@@ -420,14 +418,14 @@ __kernel void m09710_s04 (__global pw_t *pws, __global const kernel_rule_t *rule
    * esalt
    */
 
-  const u32 version = oldoffice01_bufs[salt_pos].version;
+  const u32 version = oldoffice01_bufs[digests_offset].version;
 
   u32 encryptedVerifier[4];
 
-  encryptedVerifier[0] = oldoffice01_bufs[salt_pos].encryptedVerifier[0];
-  encryptedVerifier[1] = oldoffice01_bufs[salt_pos].encryptedVerifier[1];
-  encryptedVerifier[2] = oldoffice01_bufs[salt_pos].encryptedVerifier[2];
-  encryptedVerifier[3] = oldoffice01_bufs[salt_pos].encryptedVerifier[3];
+  encryptedVerifier[0] = oldoffice01_bufs[digests_offset].encryptedVerifier[0];
+  encryptedVerifier[1] = oldoffice01_bufs[digests_offset].encryptedVerifier[1];
+  encryptedVerifier[2] = oldoffice01_bufs[digests_offset].encryptedVerifier[2];
+  encryptedVerifier[3] = oldoffice01_bufs[digests_offset].encryptedVerifier[3];
 
   /**
    * digest

@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _MD5_
-
 #define NEW_SIMD_CODE
 
 #include "inc_vendor.cl"
@@ -14,7 +12,7 @@
 #include "inc_common.cl"
 #include "inc_simd.cl"
 
-__constant u32 padding[8] =
+__constant u32a padding[8] =
 {
   0x5e4ebf28,
   0x418a754e,
@@ -26,7 +24,7 @@ __constant u32 padding[8] =
   0x7a695364
 };
 
-static void md5_transform_S (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[4])
+void md5_transform_S (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[4])
 {
   u32 a = digest[0];
   u32 b = digest[1];
@@ -124,7 +122,7 @@ static void md5_transform_S (const u32 w0[4], const u32 w1[4], const u32 w2[4], 
   digest[3] += d;
 }
 
-static void m10420m (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global pdf_t *pdf_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset)
+void m10420m (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global pdf_t *pdf_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset)
 {
   /**
    * modifier
@@ -139,23 +137,23 @@ static void m10420m (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_le
 
   u32 o_buf[8];
 
-  o_buf[0] = pdf_bufs[salt_pos].o_buf[0];
-  o_buf[1] = pdf_bufs[salt_pos].o_buf[1];
-  o_buf[2] = pdf_bufs[salt_pos].o_buf[2];
-  o_buf[3] = pdf_bufs[salt_pos].o_buf[3];
-  o_buf[4] = pdf_bufs[salt_pos].o_buf[4];
-  o_buf[5] = pdf_bufs[salt_pos].o_buf[5];
-  o_buf[6] = pdf_bufs[salt_pos].o_buf[6];
-  o_buf[7] = pdf_bufs[salt_pos].o_buf[7];
+  o_buf[0] = pdf_bufs[digests_offset].o_buf[0];
+  o_buf[1] = pdf_bufs[digests_offset].o_buf[1];
+  o_buf[2] = pdf_bufs[digests_offset].o_buf[2];
+  o_buf[3] = pdf_bufs[digests_offset].o_buf[3];
+  o_buf[4] = pdf_bufs[digests_offset].o_buf[4];
+  o_buf[5] = pdf_bufs[digests_offset].o_buf[5];
+  o_buf[6] = pdf_bufs[digests_offset].o_buf[6];
+  o_buf[7] = pdf_bufs[digests_offset].o_buf[7];
 
-  u32 P = pdf_bufs[salt_pos].P;
+  u32 P = pdf_bufs[digests_offset].P;
 
   u32 id_buf[4];
 
-  id_buf[0] = pdf_bufs[salt_pos].id_buf[0];
-  id_buf[1] = pdf_bufs[salt_pos].id_buf[1];
-  id_buf[2] = pdf_bufs[salt_pos].id_buf[2];
-  id_buf[3] = pdf_bufs[salt_pos].id_buf[3];
+  id_buf[0] = pdf_bufs[digests_offset].id_buf[0];
+  id_buf[1] = pdf_bufs[digests_offset].id_buf[1];
+  id_buf[2] = pdf_bufs[digests_offset].id_buf[2];
+  id_buf[3] = pdf_bufs[digests_offset].id_buf[3];
 
   u32 p0[4];
   u32 p1[4];
@@ -277,7 +275,7 @@ static void m10420m (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_le
   }
 }
 
-static void m10420s (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global pdf_t *pdf_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset)
+void m10420s (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global pdf_t *pdf_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset)
 {
   /**
    * modifier
@@ -292,23 +290,23 @@ static void m10420s (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_le
 
   u32 o_buf[8];
 
-  o_buf[0] = pdf_bufs[salt_pos].o_buf[0];
-  o_buf[1] = pdf_bufs[salt_pos].o_buf[1];
-  o_buf[2] = pdf_bufs[salt_pos].o_buf[2];
-  o_buf[3] = pdf_bufs[salt_pos].o_buf[3];
-  o_buf[4] = pdf_bufs[salt_pos].o_buf[4];
-  o_buf[5] = pdf_bufs[salt_pos].o_buf[5];
-  o_buf[6] = pdf_bufs[salt_pos].o_buf[6];
-  o_buf[7] = pdf_bufs[salt_pos].o_buf[7];
+  o_buf[0] = pdf_bufs[digests_offset].o_buf[0];
+  o_buf[1] = pdf_bufs[digests_offset].o_buf[1];
+  o_buf[2] = pdf_bufs[digests_offset].o_buf[2];
+  o_buf[3] = pdf_bufs[digests_offset].o_buf[3];
+  o_buf[4] = pdf_bufs[digests_offset].o_buf[4];
+  o_buf[5] = pdf_bufs[digests_offset].o_buf[5];
+  o_buf[6] = pdf_bufs[digests_offset].o_buf[6];
+  o_buf[7] = pdf_bufs[digests_offset].o_buf[7];
 
-  u32 P = pdf_bufs[salt_pos].P;
+  u32 P = pdf_bufs[digests_offset].P;
 
   u32 id_buf[4];
 
-  id_buf[0] = pdf_bufs[salt_pos].id_buf[0];
-  id_buf[1] = pdf_bufs[salt_pos].id_buf[1];
-  id_buf[2] = pdf_bufs[salt_pos].id_buf[2];
-  id_buf[3] = pdf_bufs[salt_pos].id_buf[3];
+  id_buf[0] = pdf_bufs[digests_offset].id_buf[0];
+  id_buf[1] = pdf_bufs[digests_offset].id_buf[1];
+  id_buf[2] = pdf_bufs[digests_offset].id_buf[2];
+  id_buf[3] = pdf_bufs[digests_offset].id_buf[3];
 
   u32 p0[4];
   u32 p1[4];

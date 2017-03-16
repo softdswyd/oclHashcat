@@ -213,7 +213,7 @@ static int mangle_omit (char arr[BLOCK_SIZE], int arr_len, int upos, int ulen)
 
 static int mangle_insert (char arr[BLOCK_SIZE], int arr_len, int upos, char c)
 {
-  if (upos >= arr_len) return (arr_len);
+  if (upos > arr_len) return (arr_len);
 
   if ((arr_len + 1) >= BLOCK_SIZE) return (arr_len);
 
@@ -719,14 +719,14 @@ int _old_apply_rule (char *rule, int rule_len, char in[BLOCK_SIZE], int in_len, 
 
       case RULE_OP_MANGLE_APPEND_MEMORY:
         if (mem_len < 1) return (RULE_RC_REJECT_ERROR);
-        if ((out_len + mem_len) > BLOCK_SIZE) return (RULE_RC_REJECT_ERROR);
+        if ((out_len + mem_len) >= BLOCK_SIZE) return (RULE_RC_REJECT_ERROR);
         memcpy (out + out_len, mem, mem_len);
         out_len += mem_len;
         break;
 
       case RULE_OP_MANGLE_PREPEND_MEMORY:
         if (mem_len < 1) return (RULE_RC_REJECT_ERROR);
-        if ((mem_len + out_len) > BLOCK_SIZE) return (RULE_RC_REJECT_ERROR);
+        if ((mem_len + out_len) >= BLOCK_SIZE) return (RULE_RC_REJECT_ERROR);
         memcpy (mem + mem_len, out, out_len);
         out_len += mem_len;
         memcpy (out, mem, out_len);

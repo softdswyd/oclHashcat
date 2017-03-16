@@ -38,6 +38,7 @@ static const struct option long_options[] =
   {"gpu-temp-disable",          no_argument,       0, IDX_GPU_TEMP_DISABLE},
   {"gpu-temp-retain",           required_argument, 0, IDX_GPU_TEMP_RETAIN},
   {"hash-type",                 required_argument, 0, IDX_HASH_MODE},
+  {"hccapx-message-pair",       required_argument, 0, IDX_HCCAPX_MESSAGE_PAIR},
   {"help",                      no_argument,       0, IDX_HELP},
   {"hex-charset",               no_argument,       0, IDX_HEX_CHARSET},
   {"hex-salt",                  no_argument,       0, IDX_HEX_SALT},
@@ -59,6 +60,7 @@ static const struct option long_options[] =
   {"markov-disable",            no_argument,       0, IDX_MARKOV_DISABLE},
   {"markov-hcstat",             required_argument, 0, IDX_MARKOV_HCSTAT},
   {"markov-threshold",          required_argument, 0, IDX_MARKOV_THRESHOLD},
+  {"nonce-error-corrections",   required_argument, 0, IDX_NONCE_ERROR_CORRECTIONS},
   {"nvidia-spin-damp",          required_argument, 0, IDX_NVIDIA_SPIN_DAMP},
   {"opencl-devices",            required_argument, 0, IDX_OPENCL_DEVICES},
   {"opencl-device-types",       required_argument, 0, IDX_OPENCL_DEVICE_TYPES},
@@ -132,6 +134,7 @@ int user_options_init (hashcat_ctx_t *hashcat_ctx)
   user_options->gpu_temp_disable          = GPU_TEMP_DISABLE;
   user_options->gpu_temp_retain           = GPU_TEMP_RETAIN;
   user_options->hash_mode                 = HASH_MODE;
+  user_options->hccapx_message_pair       = HCCAPX_MESSAGE_PAIR;
   user_options->hex_charset               = HEX_CHARSET;
   user_options->hex_salt                  = HEX_SALT;
   user_options->hex_wordlist              = HEX_WORDLIST;
@@ -152,6 +155,7 @@ int user_options_init (hashcat_ctx_t *hashcat_ctx)
   user_options->markov_disable            = MARKOV_DISABLE;
   user_options->markov_hcstat             = NULL;
   user_options->markov_threshold          = MARKOV_THRESHOLD;
+  user_options->nonce_error_corrections   = NONCE_ERROR_CORRECTIONS;
   user_options->nvidia_spin_damp          = NVIDIA_SPIN_DAMP;
   user_options->opencl_devices            = NULL;
   user_options->opencl_device_types       = NULL;
@@ -313,6 +317,9 @@ int user_options_getopt (hashcat_ctx_t *hashcat_ctx, int argc, char **argv)
       case IDX_GPU_TEMP_RETAIN:           user_options->gpu_temp_retain           = atoi (optarg);  break;
       case IDX_POWERTUNE_ENABLE:          user_options->powertune_enable          = true;           break;
       case IDX_LOGFILE_DISABLE:           user_options->logfile_disable           = true;           break;
+      case IDX_HCCAPX_MESSAGE_PAIR:       user_options->hccapx_message_pair       = atoi (optarg);
+                                          user_options->hccapx_message_pair_chgd  = true;           break;
+      case IDX_NONCE_ERROR_CORRECTIONS:   user_options->nonce_error_corrections   = atoi (optarg);  break;
       case IDX_TRUECRYPT_KEYFILES:        user_options->truecrypt_keyfiles        = optarg;         break;
       case IDX_VERACRYPT_KEYFILES:        user_options->veracrypt_keyfiles        = optarg;         break;
       case IDX_VERACRYPT_PIM:             user_options->veracrypt_pim             = atoi (optarg);  break;
@@ -384,6 +391,23 @@ int user_options_sanity (hashcat_ctx_t *hashcat_ctx)
     event_log_error (hashcat_ctx, "Invalid attack-mode specified");
 
     return -1;
+  }
+
+  if (user_options->hccapx_message_pair_chgd == true)
+  {
+    if (user_options->remove == true)
+    {
+      event_log_error (hashcat_ctx, "Mixing remove parameter not allowed with hccapx-message-pair parameter");
+
+      return -1;
+    }
+
+    if (user_options->hccapx_message_pair >= 6)
+    {
+      event_log_error (hashcat_ctx, "Invalid hccapx-message-pair specified");
+
+      return -1;
+    }
   }
 
   if (user_options->runtime_chgd == true && user_options->runtime == 0)
@@ -546,8 +570,10 @@ int user_options_sanity (hashcat_ctx_t *hashcat_ctx)
     if (user_options->force == false)
     {
       event_log_error (hashcat_ctx, "The manual use of the -n option (or --kernel-accel) is outdated.");
-      event_log_error (hashcat_ctx, "Please consider using the -w option instead.");
-      event_log_error (hashcat_ctx, "You can use --force to override this but do not post error reports if you do so.");
+
+      event_log_warning (hashcat_ctx, "Please consider using the -w option instead.");
+      event_log_warning (hashcat_ctx, "You can use --force to override this but do not post error reports if you do so.");
+      event_log_warning (hashcat_ctx, NULL);
 
       return -1;
     }
@@ -572,8 +598,10 @@ int user_options_sanity (hashcat_ctx_t *hashcat_ctx)
     if (user_options->force == false)
     {
       event_log_error (hashcat_ctx, "The manual use of the -u option (or --kernel-loops) is outdated.");
-      event_log_error (hashcat_ctx, "Please consider using the -w option instead.");
-      event_log_error (hashcat_ctx, "You can use --force to override this but do not post error reports if you do so.");
+
+      event_log_warning (hashcat_ctx, "Please consider using the -w option instead.");
+      event_log_warning (hashcat_ctx, "You can use --force to override this but do not post error reports if you do so.");
+      event_log_warning (hashcat_ctx, NULL);
 
       return -1;
     }
@@ -689,7 +717,6 @@ int user_options_sanity (hashcat_ctx_t *hashcat_ctx)
     }
   }
 
-
   if (user_options->debug_mode > 0)
   {
     if (user_options->attack_mode != ATTACK_MODE_STRAIGHT)
@@ -771,6 +798,51 @@ int user_options_sanity (hashcat_ctx_t *hashcat_ctx)
 
         return -1;
       }
+    }
+  }
+
+  // custom charset checks
+
+  if ((user_options->custom_charset_1 != NULL)
+   || (user_options->custom_charset_2 != NULL)
+   || (user_options->custom_charset_3 != NULL)
+   || (user_options->custom_charset_4 != NULL))
+  {
+    if (user_options->attack_mode == ATTACK_MODE_STRAIGHT)
+    {
+      event_log_error (hashcat_ctx, "Custom-charsets not supported in attack-mode 0");
+
+      return -1;
+    }
+    else if (user_options->attack_mode == ATTACK_MODE_COMBI)
+    {
+      event_log_error (hashcat_ctx, "Custom-charsets not supported in attack-mode 1");
+
+      return -1;
+    }
+
+    // detect if mask was specified:
+
+    bool mask_is_missing = true;
+
+    if (user_options->keyspace == true) // special case if --keyspace was used: we need the mask but no hash file
+    {
+      if (user_options->hc_argc > 0) mask_is_missing = false;
+    }
+    else if (user_options->stdout_flag == true) // special case if --stdout was used: we need the mask but no hash file
+    {
+      if (user_options->hc_argc > 0) mask_is_missing = false;
+    }
+    else
+    {
+      if (user_options->hc_argc > 1) mask_is_missing = false;
+    }
+
+    if (mask_is_missing == true)
+    {
+      event_log_error (hashcat_ctx, "You need to specify a mask if you specify a custom-charset");
+
+      return -1;
     }
   }
 
@@ -931,6 +1003,54 @@ int user_options_sanity (hashcat_ctx_t *hashcat_ctx)
   return 0;
 }
 
+void user_options_session_auto (hashcat_ctx_t *hashcat_ctx)
+{
+  user_options_t *user_options = hashcat_ctx->user_options;
+
+  if (strcmp (user_options->session, PROGNAME) == 0)
+  {
+    if (user_options->benchmark == true)
+    {
+      user_options->session = "benchmark";
+    }
+
+    if (user_options->speed_only == true)
+    {
+      user_options->session = "speed-only";
+    }
+
+    if (user_options->progress_only == true)
+    {
+      user_options->session = "progress-only";
+    }
+
+    if (user_options->keyspace == true)
+    {
+      user_options->session = "keyspace";
+    }
+
+    if (user_options->stdout_flag == true)
+    {
+      user_options->session = "stdout";
+    }
+
+    if (user_options->opencl_info == true)
+    {
+      user_options->session = "opencl_info";
+    }
+
+    if (user_options->show == true)
+    {
+      user_options->session = "show";
+    }
+
+    if (user_options->left == true)
+    {
+      user_options->session = "left";
+    }
+  }
+}
+
 void user_options_preprocess (hashcat_ctx_t *hashcat_ctx)
 {
   user_options_t *user_options = hashcat_ctx->user_options;
@@ -980,7 +1100,6 @@ void user_options_preprocess (hashcat_ctx_t *hashcat_ctx)
     user_options->restore_disable     = true;
     user_options->restore             = false;
     user_options->restore_timer       = 0;
-    user_options->session             = "benchmark";
     user_options->show                = false;
     user_options->status              = false;
     user_options->status_timer        = 0;
@@ -1001,13 +1120,11 @@ void user_options_preprocess (hashcat_ctx_t *hashcat_ctx)
 
   if (user_options->keyspace == true)
   {
-    user_options->session             = "keyspace";
     user_options->quiet               = true;
   }
 
   if (user_options->stdout_flag == true)
   {
-    user_options->session             = "stdout";
     user_options->quiet               = true;
     user_options->hash_mode           = 2000;
     user_options->outfile_format      = OUTFILE_FMT_PLAIN;
@@ -1019,7 +1136,6 @@ void user_options_preprocess (hashcat_ctx_t *hashcat_ctx)
 
   if (user_options->opencl_info == true)
   {
-    user_options->session             = "opencl_info";
     user_options->quiet               = true;
     user_options->opencl_platforms    = NULL;
     user_options->opencl_devices      = NULL;
@@ -1277,42 +1393,42 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
 
   if (hc_path_read (folder_config->cwd) == false)
   {
-    event_log_error (hashcat_ctx, "%s: %m", folder_config->cwd);
+    event_log_error (hashcat_ctx, "%s: %s", folder_config->cwd, strerror (errno));
 
     return -1;
   }
 
   if (hc_path_read (folder_config->install_dir) == false)
   {
-    event_log_error (hashcat_ctx, "%s: %m", folder_config->install_dir);
+    event_log_error (hashcat_ctx, "%s: %s", folder_config->install_dir, strerror (errno));
 
     return -1;
   }
 
   if (hc_path_read (folder_config->profile_dir) == false)
   {
-    event_log_error (hashcat_ctx, "%s: %m", folder_config->profile_dir);
+    event_log_error (hashcat_ctx, "%s: %s", folder_config->profile_dir, strerror (errno));
 
     return -1;
   }
 
   if (hc_path_write (folder_config->session_dir) == false)
   {
-    event_log_error (hashcat_ctx, "%s: %m", folder_config->session_dir);
+    event_log_error (hashcat_ctx, "%s: %s", folder_config->session_dir, strerror (errno));
 
     return -1;
   }
 
   if (hc_path_read (folder_config->shared_dir) == false)
   {
-    event_log_error (hashcat_ctx, "%s: %m", folder_config->shared_dir);
+    event_log_error (hashcat_ctx, "%s: %s", folder_config->shared_dir, strerror (errno));
 
     return -1;
   }
 
   if (hc_path_read (folder_config->cpath_real) == false)
   {
-    event_log_error (hashcat_ctx, "%s: %m", folder_config->cpath_real);
+    event_log_error (hashcat_ctx, "%s: %s", folder_config->cpath_real, strerror (errno));
 
     return -1;
   }
@@ -1325,7 +1441,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
     {
       if (hc_path_read (user_options_extra->hc_hash) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", user_options_extra->hc_hash);
+        event_log_error (hashcat_ctx, "%s: %s", user_options_extra->hc_hash, strerror (errno));
 
         return -1;
       }
@@ -1342,7 +1458,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
 
       if (hc_path_exist (wlfile) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", wlfile);
+        event_log_error (hashcat_ctx, "%s: %s", wlfile, strerror (errno));
 
         return -1;
       }
@@ -1354,7 +1470,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
 
       if (hc_path_exist (rp_file) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", rp_file);
+        event_log_error (hashcat_ctx, "%s: %s", rp_file, strerror (errno));
 
         return -1;
       }
@@ -1371,14 +1487,14 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
 
       if (hc_path_read (dictfile1) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", dictfile1);
+        event_log_error (hashcat_ctx, "%s: %s", dictfile1, strerror (errno));
 
         return -1;
       }
 
       if (hc_path_read (dictfile2) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", dictfile2);
+        event_log_error (hashcat_ctx, "%s: %s", dictfile2, strerror (errno));
 
         return -1;
       }
@@ -1396,7 +1512,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
       {
         if (hc_path_read (maskfile) == false)
         {
-          event_log_error (hashcat_ctx, "%s: %m", maskfile);
+          event_log_error (hashcat_ctx, "%s: %s", maskfile, strerror (errno));
 
           return -1;
         }
@@ -1415,7 +1531,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
 
       if (hc_path_exist (wlfile) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", wlfile);
+        event_log_error (hashcat_ctx, "%s: %s", wlfile, strerror (errno));
 
         return -1;
       }
@@ -1426,7 +1542,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
       {
         if (hc_path_read (maskfile) == false)
         {
-          event_log_error (hashcat_ctx, "%s: %m", maskfile);
+          event_log_error (hashcat_ctx, "%s: %s", maskfile, strerror (errno));
 
           return -1;
         }
@@ -1445,7 +1561,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
 
       if (hc_path_exist (wlfile) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", wlfile);
+        event_log_error (hashcat_ctx, "%s: %s", wlfile, strerror (errno));
 
         return -1;
       }
@@ -1456,7 +1572,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
       {
         if (hc_path_read (maskfile) == false)
         {
-          event_log_error (hashcat_ctx, "%s: %m", maskfile);
+          event_log_error (hashcat_ctx, "%s: %s", maskfile, strerror (errno));
 
           return -1;
         }
@@ -1472,7 +1588,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
     {
       if (hc_path_write (logfile_ctx->logfile) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", logfile_ctx->logfile);
+        event_log_error (hashcat_ctx, "%s: %s", logfile_ctx->logfile, strerror (errno));
 
         return -1;
       }
@@ -1481,7 +1597,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
     {
       if (hc_path_create (logfile_ctx->logfile) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", logfile_ctx->logfile);
+        event_log_error (hashcat_ctx, "%s: %s", logfile_ctx->logfile, strerror (errno));
 
         return -1;
       }
@@ -1513,7 +1629,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
     {
       if (hc_path_write (outfile_ctx->filename) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", outfile_ctx->filename);
+        event_log_error (hashcat_ctx, "%s: %s", outfile_ctx->filename, strerror (errno));
 
         return -1;
       }
@@ -1522,7 +1638,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
     {
       if (hc_path_create (outfile_ctx->filename) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", outfile_ctx->filename);
+        event_log_error (hashcat_ctx, "%s: %s", outfile_ctx->filename, strerror (errno));
 
         return -1;
       }
@@ -1540,25 +1656,44 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
     hc_stat_t tmpstat_outfile;
     hc_stat_t tmpstat_hashfile;
 
+    memset (&tmpstat_outfile,  0, sizeof (tmpstat_outfile));
+    memset (&tmpstat_hashfile, 0, sizeof (tmpstat_hashfile));
+
+    int do_check = 0;
+
     FILE *tmp_outfile_fp = fopen (outfile, "r");
 
     if (tmp_outfile_fp)
     {
-      hc_fstat (fileno (tmp_outfile_fp), &tmpstat_outfile);
+      if (hc_fstat (fileno (tmp_outfile_fp), &tmpstat_outfile))
+      {
+        fclose (tmp_outfile_fp);
+
+        return -1;
+      }
 
       fclose (tmp_outfile_fp);
+
+      do_check++;
     }
 
     FILE *tmp_hashfile_fp = fopen (hashfile, "r");
 
     if (tmp_hashfile_fp)
     {
-      hc_fstat (fileno (tmp_hashfile_fp), &tmpstat_hashfile);
+      if (hc_fstat (fileno (tmp_hashfile_fp), &tmpstat_hashfile))
+      {
+        fclose (tmp_hashfile_fp);
+
+        return -1;
+      }
 
       fclose (tmp_hashfile_fp);
+
+      do_check++;
     }
 
-    if (tmp_outfile_fp)
+    if (do_check == 2)
     {
       tmpstat_outfile.st_mode     = 0;
       tmpstat_outfile.st_nlink    = 0;
@@ -1597,7 +1732,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
   {
     if (hc_path_write (pidfile_ctx->filename) == false)
     {
-      event_log_error (hashcat_ctx, "%s: %m", pidfile_ctx->filename);
+      event_log_error (hashcat_ctx, "%s: %s", pidfile_ctx->filename, strerror (errno));
 
       return -1;
     }
@@ -1606,7 +1741,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
   {
     if (hc_path_create (pidfile_ctx->filename) == false)
     {
-      event_log_error (hashcat_ctx, "%s: %m", pidfile_ctx->filename);
+      event_log_error (hashcat_ctx, "%s: %s", pidfile_ctx->filename, strerror (errno));
 
       return -1;
     }
@@ -1620,7 +1755,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
     {
       if (hc_path_write (potfile_ctx->filename) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", potfile_ctx->filename);
+        event_log_error (hashcat_ctx, "%s: %s", potfile_ctx->filename, strerror (errno));
 
         return -1;
       }
@@ -1629,7 +1764,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
     {
       if (hc_path_create (potfile_ctx->filename) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", potfile_ctx->filename);
+        event_log_error (hashcat_ctx, "%s: %s", potfile_ctx->filename, strerror (errno));
 
         return -1;
       }
@@ -1644,7 +1779,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
     {
       if (hc_path_write (dictstat_ctx->filename) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", dictstat_ctx->filename);
+        event_log_error (hashcat_ctx, "%s: %s", dictstat_ctx->filename, strerror (errno));
 
         return -1;
       }
@@ -1653,7 +1788,7 @@ int user_options_check_files (hashcat_ctx_t *hashcat_ctx)
     {
       if (hc_path_create (dictstat_ctx->filename) == false)
       {
-        event_log_error (hashcat_ctx, "%s: %m", dictstat_ctx->filename);
+        event_log_error (hashcat_ctx, "%s: %s", dictstat_ctx->filename, strerror (errno));
 
         return -1;
       }

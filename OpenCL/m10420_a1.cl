@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _MD5_
-
 #define NEW_SIMD_CODE
 
 #include "inc_vendor.cl"
@@ -14,7 +12,7 @@
 #include "inc_common.cl"
 #include "inc_simd.cl"
 
-__constant u32 padding[8] =
+__constant u32a padding[8] =
 {
   0x5e4ebf28,
   0x418a754e,
@@ -26,7 +24,7 @@ __constant u32 padding[8] =
   0x7a695364
 };
 
-static void md5_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[4])
+void md5_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[4])
 {
   u32x a = digest[0];
   u32x b = digest[1];
@@ -160,23 +158,23 @@ __kernel void m10420_m04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   u32 o_buf[8];
 
-  o_buf[0] = pdf_bufs[salt_pos].o_buf[0];
-  o_buf[1] = pdf_bufs[salt_pos].o_buf[1];
-  o_buf[2] = pdf_bufs[salt_pos].o_buf[2];
-  o_buf[3] = pdf_bufs[salt_pos].o_buf[3];
-  o_buf[4] = pdf_bufs[salt_pos].o_buf[4];
-  o_buf[5] = pdf_bufs[salt_pos].o_buf[5];
-  o_buf[6] = pdf_bufs[salt_pos].o_buf[6];
-  o_buf[7] = pdf_bufs[salt_pos].o_buf[7];
+  o_buf[0] = pdf_bufs[digests_offset].o_buf[0];
+  o_buf[1] = pdf_bufs[digests_offset].o_buf[1];
+  o_buf[2] = pdf_bufs[digests_offset].o_buf[2];
+  o_buf[3] = pdf_bufs[digests_offset].o_buf[3];
+  o_buf[4] = pdf_bufs[digests_offset].o_buf[4];
+  o_buf[5] = pdf_bufs[digests_offset].o_buf[5];
+  o_buf[6] = pdf_bufs[digests_offset].o_buf[6];
+  o_buf[7] = pdf_bufs[digests_offset].o_buf[7];
 
-  u32 P = pdf_bufs[salt_pos].P;
+  u32 P = pdf_bufs[digests_offset].P;
 
   u32 id_buf[4];
 
-  id_buf[0] = pdf_bufs[salt_pos].id_buf[0];
-  id_buf[1] = pdf_bufs[salt_pos].id_buf[1];
-  id_buf[2] = pdf_bufs[salt_pos].id_buf[2];
-  id_buf[3] = pdf_bufs[salt_pos].id_buf[3];
+  id_buf[0] = pdf_bufs[digests_offset].id_buf[0];
+  id_buf[1] = pdf_bufs[digests_offset].id_buf[1];
+  id_buf[2] = pdf_bufs[digests_offset].id_buf[2];
+  id_buf[3] = pdf_bufs[digests_offset].id_buf[3];
 
   /**
    * loop
@@ -381,23 +379,23 @@ __kernel void m10420_s04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   u32 o_buf[8];
 
-  o_buf[0] = pdf_bufs[salt_pos].o_buf[0];
-  o_buf[1] = pdf_bufs[salt_pos].o_buf[1];
-  o_buf[2] = pdf_bufs[salt_pos].o_buf[2];
-  o_buf[3] = pdf_bufs[salt_pos].o_buf[3];
-  o_buf[4] = pdf_bufs[salt_pos].o_buf[4];
-  o_buf[5] = pdf_bufs[salt_pos].o_buf[5];
-  o_buf[6] = pdf_bufs[salt_pos].o_buf[6];
-  o_buf[7] = pdf_bufs[salt_pos].o_buf[7];
+  o_buf[0] = pdf_bufs[digests_offset].o_buf[0];
+  o_buf[1] = pdf_bufs[digests_offset].o_buf[1];
+  o_buf[2] = pdf_bufs[digests_offset].o_buf[2];
+  o_buf[3] = pdf_bufs[digests_offset].o_buf[3];
+  o_buf[4] = pdf_bufs[digests_offset].o_buf[4];
+  o_buf[5] = pdf_bufs[digests_offset].o_buf[5];
+  o_buf[6] = pdf_bufs[digests_offset].o_buf[6];
+  o_buf[7] = pdf_bufs[digests_offset].o_buf[7];
 
-  u32 P = pdf_bufs[salt_pos].P;
+  u32 P = pdf_bufs[digests_offset].P;
 
   u32 id_buf[4];
 
-  id_buf[0] = pdf_bufs[salt_pos].id_buf[0];
-  id_buf[1] = pdf_bufs[salt_pos].id_buf[1];
-  id_buf[2] = pdf_bufs[salt_pos].id_buf[2];
-  id_buf[3] = pdf_bufs[salt_pos].id_buf[3];
+  id_buf[0] = pdf_bufs[digests_offset].id_buf[0];
+  id_buf[1] = pdf_bufs[digests_offset].id_buf[1];
+  id_buf[2] = pdf_bufs[digests_offset].id_buf[2];
+  id_buf[3] = pdf_bufs[digests_offset].id_buf[3];
 
   /**
    * digest

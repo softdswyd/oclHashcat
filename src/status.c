@@ -29,6 +29,7 @@ static const char ST_0007[] = "Quit";
 static const char ST_0008[] = "Bypass";
 static const char ST_0009[] = "Aborted (Checkpoint)";
 static const char ST_0010[] = "Aborted (Runtime)";
+static const char ST_0011[] = "Running (Checkpoint Quit requested)";
 static const char ST_9999[] = "Unknown! Bug!";
 
 static const char UNITS[7] = { ' ', 'k', 'M', 'G', 'T', 'P', 'E' };
@@ -196,6 +197,16 @@ char *status_get_status_string (const hashcat_ctx_t *hashcat_ctx)
 
   const int devices_status = status_ctx->devices_status;
 
+  // special case: running but checkpoint quit requested
+
+  if (devices_status == STATUS_RUNNING)
+  {
+    if (status_ctx->checkpoint_shutdown == true)
+    {
+      return ((char *) ST_0011);
+    }
+  }
+
   switch (devices_status)
   {
     case STATUS_INIT:               return ((char *) ST_0000);
@@ -241,20 +252,20 @@ char *status_get_hash_target (const hashcat_ctx_t *hashcat_ctx)
 
       wpa_t *wpa = (wpa_t *) hashes->esalts_buf;
 
-      snprintf (tmp_buf, HCBUFSIZ_TINY - 1, "%s (%02x:%02x:%02x:%02x:%02x:%02x <-> %02x:%02x:%02x:%02x:%02x:%02x)",
+      snprintf (tmp_buf, HCBUFSIZ_TINY - 1, "%s (AP:%02x:%02x:%02x:%02x:%02x:%02x STA:%02x:%02x:%02x:%02x:%02x:%02x)",
         (char *) hashes->salts_buf[0].salt_buf,
-        wpa->orig_mac1[0],
-        wpa->orig_mac1[1],
-        wpa->orig_mac1[2],
-        wpa->orig_mac1[3],
-        wpa->orig_mac1[4],
-        wpa->orig_mac1[5],
-        wpa->orig_mac2[0],
-        wpa->orig_mac2[1],
-        wpa->orig_mac2[2],
-        wpa->orig_mac2[3],
-        wpa->orig_mac2[4],
-        wpa->orig_mac2[5]);
+        wpa->orig_mac_ap[0],
+        wpa->orig_mac_ap[1],
+        wpa->orig_mac_ap[2],
+        wpa->orig_mac_ap[3],
+        wpa->orig_mac_ap[4],
+        wpa->orig_mac_ap[5],
+        wpa->orig_mac_sta[0],
+        wpa->orig_mac_sta[1],
+        wpa->orig_mac_sta[2],
+        wpa->orig_mac_sta[3],
+        wpa->orig_mac_sta[4],
+        wpa->orig_mac_sta[5]);
 
       return tmp_buf;
     }
@@ -539,6 +550,8 @@ double status_get_input_base_percent (const hashcat_ctx_t *hashcat_ctx)
   const int input_base_offset = status_get_input_base_offset (hashcat_ctx);
   const int input_base_count  = status_get_input_base_count (hashcat_ctx);
 
+  if (input_base_count == 0) return 0;
+
   return ((double) input_base_offset / (double) input_base_count) * 100;
 }
 
@@ -651,6 +664,8 @@ double status_get_input_mod_percent (const hashcat_ctx_t *hashcat_ctx)
 {
   const int input_mod_offset = status_get_input_mod_offset (hashcat_ctx);
   const int input_mod_count  = status_get_input_mod_count  (hashcat_ctx);
+
+  if (input_mod_count == 0) return 0;
 
   return ((double) input_mod_offset / (double) input_mod_count) * 100;
 }
@@ -783,6 +798,8 @@ double status_get_digests_percent (const hashcat_ctx_t *hashcat_ctx)
 {
   const hashes_t *hashes = hashcat_ctx->hashes;
 
+  if (hashes->digests_cnt == 0) return 0;
+
   return ((double) hashes->digests_done / (double) hashes->digests_cnt) * 100;
 }
 
@@ -803,6 +820,8 @@ int status_get_salts_cnt (const hashcat_ctx_t *hashcat_ctx)
 double status_get_salts_percent (const hashcat_ctx_t *hashcat_ctx)
 {
   const hashes_t *hashes = hashcat_ctx->hashes;
+
+  if (hashes->salts_cnt == 0) return 0;
 
   return ((double) hashes->salts_done / (double) hashes->salts_cnt) * 100;
 }
@@ -1616,12 +1635,12 @@ char *status_get_hwmon_dev (const hashcat_ctx_t *hashcat_ctx, const int device_i
 
   if (num_corespeed >= 0)
   {
-    output_len += snprintf (output_buf + output_len, HCBUFSIZ_TINY - output_len, "Core:%4dMhz ", num_corespeed);
+    output_len += snprintf (output_buf + output_len, HCBUFSIZ_TINY - output_len, "Core:%4dMHz ", num_corespeed);
   }
 
   if (num_memoryspeed >= 0)
   {
-    output_len += snprintf (output_buf + output_len, HCBUFSIZ_TINY - output_len, "Mem:%4dMhz ", num_memoryspeed);
+    output_len += snprintf (output_buf + output_len, HCBUFSIZ_TINY - output_len, "Mem:%4dMHz ", num_memoryspeed);
   }
 
   if (num_buslanes >= 0)

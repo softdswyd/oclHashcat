@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _SHA1_
-
 #define NEW_SIMD_CODE
 
 #include "inc_vendor.cl"
@@ -14,7 +12,7 @@
 #include "inc_common.cl"
 #include "inc_simd.cl"
 
-static void sha1_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[5])
+void sha1_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[5])
 {
   u32x A = digest[0];
   u32x B = digest[1];
@@ -142,7 +140,7 @@ static void sha1_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4]
   digest[4] += E;
 }
 
-static void hmac_sha1_pad (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[5], u32x opad[5])
+void hmac_sha1_pad (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[5], u32x opad[5])
 {
   w0[0] = w0[0] ^ 0x36363636;
   w0[1] = w0[1] ^ 0x36363636;
@@ -195,7 +193,7 @@ static void hmac_sha1_pad (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x 
   sha1_transform (w0, w1, w2, w3, opad);
 }
 
-static void hmac_sha1_run (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[5], u32x opad[5], u32x digest[5])
+void hmac_sha1_run (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[5], u32x opad[5], u32x digest[5])
 {
   digest[0] = ipad[0];
   digest[1] = ipad[1];
@@ -231,7 +229,7 @@ static void hmac_sha1_run (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x 
   sha1_transform (w0, w1, w2, w3, digest);
 }
 
-static void m05400m (__local u32 *w_s, u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *s_msg_buf)
+void m05400m (__local u32 *w_s, u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *s_msg_buf)
 {
   /**
    * modifier
@@ -244,8 +242,8 @@ static void m05400m (__local u32 *w_s, u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4
    * salt
    */
 
-  const u32 nr_len  = ikepsk_bufs[salt_pos].nr_len;
-  const u32 msg_len = ikepsk_bufs[salt_pos].msg_len;
+  const u32 nr_len  = ikepsk_bufs[digests_offset].nr_len;
+  const u32 msg_len = ikepsk_bufs[digests_offset].msg_len;
 
   /**
    * loop
@@ -333,7 +331,7 @@ static void m05400m (__local u32 *w_s, u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4
     int left;
     int off;
 
-    for (left = ikepsk_bufs[salt_pos].msg_len, off = 0; left >= 56; left -= 64, off += 16)
+    for (left = ikepsk_bufs[digests_offset].msg_len, off = 0; left >= 56; left -= 64, off += 16)
     {
       w0_t[0] = s_msg_buf[off +  0];
       w0_t[1] = s_msg_buf[off +  1];
@@ -378,7 +376,7 @@ static void m05400m (__local u32 *w_s, u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4
   }
 }
 
-static void m05400s (__local u32 *w_s, u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *s_msg_buf)
+void m05400s (__local u32 *w_s, u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global ikepsk_t *ikepsk_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *s_msg_buf)
 {
   /**
    * modifier
@@ -391,8 +389,8 @@ static void m05400s (__local u32 *w_s, u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4
    * salt
    */
 
-  const u32 nr_len  = ikepsk_bufs[salt_pos].nr_len;
-  const u32 msg_len = ikepsk_bufs[salt_pos].msg_len;
+  const u32 nr_len  = ikepsk_bufs[digests_offset].nr_len;
+  const u32 msg_len = ikepsk_bufs[digests_offset].msg_len;
 
   /**
    * digest
@@ -492,7 +490,7 @@ static void m05400s (__local u32 *w_s, u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4
     int left;
     int off;
 
-    for (left = ikepsk_bufs[salt_pos].msg_len, off = 0; left >= 56; left -= 64, off += 16)
+    for (left = ikepsk_bufs[digests_offset].msg_len, off = 0; left >= 56; left -= 64, off += 16)
     {
       w0_t[0] = s_msg_buf[off +  0];
       w0_t[1] = s_msg_buf[off +  1];
@@ -555,7 +553,7 @@ __kernel void m05400_m04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 16; i += lsz)
   {
-    w_s[i] = swap32_S (ikepsk_bufs[salt_pos].nr_buf[i]);
+    w_s[i] = swap32_S (ikepsk_bufs[digests_offset].nr_buf[i]);
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -564,7 +562,7 @@ __kernel void m05400_m04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 128; i += lsz)
   {
-    s_msg_buf[i] = swap32_S (ikepsk_bufs[salt_pos].msg_buf[i]);
+    s_msg_buf[i] = swap32_S (ikepsk_bufs[digests_offset].msg_buf[i]);
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -630,7 +628,7 @@ __kernel void m05400_m08 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 16; i += lsz)
   {
-    w_s[i] = swap32_S (ikepsk_bufs[salt_pos].nr_buf[i]);
+    w_s[i] = swap32_S (ikepsk_bufs[digests_offset].nr_buf[i]);
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -639,7 +637,7 @@ __kernel void m05400_m08 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 128; i += lsz)
   {
-    s_msg_buf[i] = swap32_S (ikepsk_bufs[salt_pos].msg_buf[i]);
+    s_msg_buf[i] = swap32_S (ikepsk_bufs[digests_offset].msg_buf[i]);
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -705,7 +703,7 @@ __kernel void m05400_m16 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 16; i += lsz)
   {
-    w_s[i] = swap32_S (ikepsk_bufs[salt_pos].nr_buf[i]);
+    w_s[i] = swap32_S (ikepsk_bufs[digests_offset].nr_buf[i]);
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -714,7 +712,7 @@ __kernel void m05400_m16 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 128; i += lsz)
   {
-    s_msg_buf[i] = swap32_S (ikepsk_bufs[salt_pos].msg_buf[i]);
+    s_msg_buf[i] = swap32_S (ikepsk_bufs[digests_offset].msg_buf[i]);
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -780,7 +778,7 @@ __kernel void m05400_s04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 16; i += lsz)
   {
-    w_s[i] = swap32_S (ikepsk_bufs[salt_pos].nr_buf[i]);
+    w_s[i] = swap32_S (ikepsk_bufs[digests_offset].nr_buf[i]);
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -789,7 +787,7 @@ __kernel void m05400_s04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 128; i += lsz)
   {
-    s_msg_buf[i] = swap32_S (ikepsk_bufs[salt_pos].msg_buf[i]);
+    s_msg_buf[i] = swap32_S (ikepsk_bufs[digests_offset].msg_buf[i]);
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -855,7 +853,7 @@ __kernel void m05400_s08 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 16; i += lsz)
   {
-    w_s[i] = swap32_S (ikepsk_bufs[salt_pos].nr_buf[i]);
+    w_s[i] = swap32_S (ikepsk_bufs[digests_offset].nr_buf[i]);
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -864,7 +862,7 @@ __kernel void m05400_s08 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 128; i += lsz)
   {
-    s_msg_buf[i] = swap32_S (ikepsk_bufs[salt_pos].msg_buf[i]);
+    s_msg_buf[i] = swap32_S (ikepsk_bufs[digests_offset].msg_buf[i]);
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -930,7 +928,7 @@ __kernel void m05400_s16 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 16; i += lsz)
   {
-    w_s[i] = swap32_S (ikepsk_bufs[salt_pos].nr_buf[i]);
+    w_s[i] = swap32_S (ikepsk_bufs[digests_offset].nr_buf[i]);
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -939,7 +937,7 @@ __kernel void m05400_s16 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 128; i += lsz)
   {
-    s_msg_buf[i] = swap32_S (ikepsk_bufs[salt_pos].msg_buf[i]);
+    s_msg_buf[i] = swap32_S (ikepsk_bufs[digests_offset].msg_buf[i]);
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);

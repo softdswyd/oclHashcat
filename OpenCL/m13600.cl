@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _ZIP2_
-
 #include "inc_vendor.cl"
 #include "inc_hash_constants.h"
 #include "inc_hash_functions.cl"
@@ -15,7 +13,7 @@
 #define COMPARE_S "inc_comp_single.cl"
 #define COMPARE_M "inc_comp_multi.cl"
 
-static void sha1_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[5])
+void sha1_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[5])
 {
   u32 A = digest[0];
   u32 B = digest[1];
@@ -143,7 +141,7 @@ static void sha1_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], c
   digest[4] += E;
 }
 
-static void hmac_sha1_pad (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[5], u32 opad[5])
+void hmac_sha1_pad (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[5], u32 opad[5])
 {
   w0[0] = w0[0] ^ 0x36363636;
   w0[1] = w0[1] ^ 0x36363636;
@@ -196,7 +194,7 @@ static void hmac_sha1_pad (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[
   sha1_transform (w0, w1, w2, w3, opad);
 }
 
-static void hmac_sha1_run (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[5], u32 opad[5], u32 digest[5])
+void hmac_sha1_run (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[5], u32 opad[5], u32 digest[5])
 {
   digest[0] = ipad[0];
   digest[1] = ipad[1];
@@ -274,7 +272,7 @@ __kernel void m13600_init (__global pw_t *pws, __global const kernel_rule_t *rul
    * salt
    */
 
-  const u32 salt_len = esalt_bufs[salt_pos].salt_len;
+  const u32 salt_len = esalt_bufs[digests_offset].salt_len;
 
   u32 ipad[5];
   u32 opad[5];
@@ -293,7 +291,7 @@ __kernel void m13600_init (__global pw_t *pws, __global const kernel_rule_t *rul
   tmps[gid].opad[3] = opad[3];
   tmps[gid].opad[4] = opad[4];
 
-  const u32 mode = esalt_bufs[salt_pos].mode;
+  const u32 mode = esalt_bufs[digests_offset].mode;
 
   u32 iter_start;
   u32 iter_stop;
@@ -321,10 +319,10 @@ __kernel void m13600_init (__global pw_t *pws, __global const kernel_rule_t *rul
 
     u32 esalt_buf[16];
 
-    esalt_buf[ 0] = swap32 (esalt_bufs[salt_pos].salt_buf[0]);
-    esalt_buf[ 1] = swap32 (esalt_bufs[salt_pos].salt_buf[1]);
-    esalt_buf[ 2] = swap32 (esalt_bufs[salt_pos].salt_buf[2]);
-    esalt_buf[ 3] = swap32 (esalt_bufs[salt_pos].salt_buf[3]);
+    esalt_buf[ 0] = swap32 (esalt_bufs[digests_offset].salt_buf[0]);
+    esalt_buf[ 1] = swap32 (esalt_bufs[digests_offset].salt_buf[1]);
+    esalt_buf[ 2] = swap32 (esalt_bufs[digests_offset].salt_buf[2]);
+    esalt_buf[ 3] = swap32 (esalt_bufs[digests_offset].salt_buf[3]);
     esalt_buf[ 4] = 0;
     esalt_buf[ 5] = 0;
     esalt_buf[ 6] = 0;
@@ -391,7 +389,7 @@ __kernel void m13600_loop (__global pw_t *pws, __global const kernel_rule_t *rul
   opad[3] = tmps[gid].opad[3];
   opad[4] = tmps[gid].opad[4];
 
-  const u32 mode = esalt_bufs[salt_pos].mode;
+  const u32 mode = esalt_bufs[digests_offset].mode;
 
   u32 iter_start;
   u32 iter_stop;
@@ -494,7 +492,7 @@ __kernel void m13600_comp (__global pw_t *pws, __global const kernel_rule_t *rul
 
   u32 key[8] = { 0 };
 
-  const u32 mode = esalt_bufs[salt_pos].mode;
+  const u32 mode = esalt_bufs[digests_offset].mode;
 
   u32 iter_start;
   u32 iter_stop;
@@ -545,47 +543,47 @@ __kernel void m13600_comp (__global pw_t *pws, __global const kernel_rule_t *rul
 
   hmac_sha1_pad (w0, w1, w2, w3, ipad, opad);
 
-  int data_len = esalt_bufs[salt_pos].data_len;
+  int data_len = esalt_bufs[digests_offset].data_len;
 
   int data_left;
   int data_off;
 
   for (data_left = data_len, data_off = 0; data_left >= 56; data_left -= 64, data_off += 16)
   {
-    w0[0] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  0]);
-    w0[1] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  1]);
-    w0[2] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  2]);
-    w0[3] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  3]);
-    w1[0] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  4]);
-    w1[1] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  5]);
-    w1[2] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  6]);
-    w1[3] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  7]);
-    w2[0] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  8]);
-    w2[1] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  9]);
-    w2[2] = swap32 (esalt_bufs[salt_pos].data_buf[data_off + 10]);
-    w2[3] = swap32 (esalt_bufs[salt_pos].data_buf[data_off + 11]);
-    w3[0] = swap32 (esalt_bufs[salt_pos].data_buf[data_off + 12]);
-    w3[1] = swap32 (esalt_bufs[salt_pos].data_buf[data_off + 13]);
-    w3[2] = swap32 (esalt_bufs[salt_pos].data_buf[data_off + 14]);
-    w3[3] = swap32 (esalt_bufs[salt_pos].data_buf[data_off + 15]);
+    w0[0] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  0]);
+    w0[1] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  1]);
+    w0[2] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  2]);
+    w0[3] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  3]);
+    w1[0] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  4]);
+    w1[1] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  5]);
+    w1[2] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  6]);
+    w1[3] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  7]);
+    w2[0] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  8]);
+    w2[1] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  9]);
+    w2[2] = swap32 (esalt_bufs[digests_offset].data_buf[data_off + 10]);
+    w2[3] = swap32 (esalt_bufs[digests_offset].data_buf[data_off + 11]);
+    w3[0] = swap32 (esalt_bufs[digests_offset].data_buf[data_off + 12]);
+    w3[1] = swap32 (esalt_bufs[digests_offset].data_buf[data_off + 13]);
+    w3[2] = swap32 (esalt_bufs[digests_offset].data_buf[data_off + 14]);
+    w3[3] = swap32 (esalt_bufs[digests_offset].data_buf[data_off + 15]);
 
     sha1_transform (w0, w1, w2, w3, ipad);
   }
 
-  w0[0] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  0]);
-  w0[1] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  1]);
-  w0[2] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  2]);
-  w0[3] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  3]);
-  w1[0] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  4]);
-  w1[1] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  5]);
-  w1[2] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  6]);
-  w1[3] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  7]);
-  w2[0] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  8]);
-  w2[1] = swap32 (esalt_bufs[salt_pos].data_buf[data_off +  9]);
-  w2[2] = swap32 (esalt_bufs[salt_pos].data_buf[data_off + 10]);
-  w2[3] = swap32 (esalt_bufs[salt_pos].data_buf[data_off + 11]);
-  w3[0] = swap32 (esalt_bufs[salt_pos].data_buf[data_off + 12]);
-  w3[1] = swap32 (esalt_bufs[salt_pos].data_buf[data_off + 13]);
+  w0[0] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  0]);
+  w0[1] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  1]);
+  w0[2] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  2]);
+  w0[3] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  3]);
+  w1[0] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  4]);
+  w1[1] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  5]);
+  w1[2] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  6]);
+  w1[3] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  7]);
+  w2[0] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  8]);
+  w2[1] = swap32 (esalt_bufs[digests_offset].data_buf[data_off +  9]);
+  w2[2] = swap32 (esalt_bufs[digests_offset].data_buf[data_off + 10]);
+  w2[3] = swap32 (esalt_bufs[digests_offset].data_buf[data_off + 11]);
+  w3[0] = swap32 (esalt_bufs[digests_offset].data_buf[data_off + 12]);
+  w3[1] = swap32 (esalt_bufs[digests_offset].data_buf[data_off + 13]);
   w3[2] = 0;
   w3[3] = (64 + data_len) * 8;
 

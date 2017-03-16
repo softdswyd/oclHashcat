@@ -94,6 +94,8 @@ static int inner2_loop (hashcat_ctx_t *hashcat_ctx)
 
       rd->words_cur = 0;
 
+      // --restore always overrides --skip
+
       user_options->skip = 0;
     }
   }
@@ -268,7 +270,10 @@ static int inner2_loop (hashcat_ctx_t *hashcat_ctx)
   logfile_sub_uint (runtime_start);
   logfile_sub_uint (runtime_stop);
 
-  hashcat_get_status (hashcat_ctx, status_ctx->hashcat_status_final);
+  if (hashcat_get_status (hashcat_ctx, status_ctx->hashcat_status_final) == -1)
+  {
+    fprintf (stderr, "Initialization problem: the hashcat status monitoring function returned an unexpected value\n");
+  }
 
   status_ctx->accessible = false;
 
@@ -297,7 +302,7 @@ static int inner2_loop (hashcat_ctx_t *hashcat_ctx)
     {
       for (induct_ctx->induction_dictionaries_pos = 0; induct_ctx->induction_dictionaries_pos < induct_ctx->induction_dictionaries_cnt; induct_ctx->induction_dictionaries_pos++)
       {
-        if (status_ctx->devices_status != STATUS_CRACKED)
+        if (status_ctx->devices_status == STATUS_EXHAUSTED)
         {
           const int rc_inner2_loop = inner2_loop (hashcat_ctx);
 
@@ -501,6 +506,16 @@ static int outer_loop (hashcat_ctx_t *hashcat_ctx)
 
   if (status_ctx->devices_status == STATUS_CRACKED)
   {
+    if ((user_options->remove == true) && (hashes->hashlist_mode == HL_MODE_FILE))
+    {
+      if (hashes->digests_saved != hashes->digests_done)
+      {
+        const int rc = save_hash (hashcat_ctx);
+
+        if (rc == -1) return -1;
+      }
+    }
+
     EVENT (EVENT_POTFILE_ALL_CRACKED);
 
     return 0;
@@ -571,7 +586,7 @@ static int outer_loop (hashcat_ctx_t *hashcat_ctx)
   if (rc_mask_init == -1) return -1;
 
   /**
-   * prevent the user from using --skip/--limit together w/ maskfile and or dictfile
+   * prevent the user from using --skip/--limit together with maskfile and/or multiple word lists
    */
 
   if (user_options->skip != 0 || user_options->limit != 0)
@@ -585,7 +600,7 @@ static int outer_loop (hashcat_ctx_t *hashcat_ctx)
   }
 
   /**
-   * prevent the user from using --keyspace together w/ maskfile and or dictfile
+   * prevent the user from using --keyspace together with maskfile and/or multiple word lists
    */
 
   if (user_options->keyspace == true)
@@ -611,7 +626,6 @@ static int outer_loop (hashcat_ctx_t *hashcat_ctx)
    */
 
   EVENT (EVENT_OUTERLOOP_MAINSCREEN);
-
 
   /**
    * Tell user about cracked hashes by potfile
@@ -656,6 +670,13 @@ static int outer_loop (hashcat_ctx_t *hashcat_ctx)
       break;
     }
 
+    if (device_param == NULL)
+    {
+      event_log_error (hashcat_ctx, "No device found for weak-hash-check");
+
+      return -1;
+    }
+
     EVENT (EVENT_WEAK_HASH_PRE);
 
     for (u32 salt_pos = 0; salt_pos < hashes->salts_cnt; salt_pos++)
@@ -674,6 +695,16 @@ static int outer_loop (hashcat_ctx_t *hashcat_ctx)
 
   if (status_ctx->devices_status == STATUS_CRACKED)
   {
+    if ((user_options->remove == true) && (hashes->hashlist_mode == HL_MODE_FILE))
+    {
+      if (hashes->digests_saved != hashes->digests_done)
+      {
+        const int rc = save_hash (hashcat_ctx);
+
+        if (rc == -1) return -1;
+      }
+    }
+
     EVENT (EVENT_WEAK_HASH_ALL_CRACKED);
 
     return 0;
@@ -858,6 +889,12 @@ void hashcat_destroy (hashcat_ctx_t *hashcat_ctx)
 int hashcat_session_init (hashcat_ctx_t *hashcat_ctx, char *install_folder, char *shared_folder, int argc, char **argv, const int comptime)
 {
   user_options_t *user_options = hashcat_ctx->user_options;
+
+  /**
+   * make it a bit more comfortable to use some of the special modes in hashcat
+   */
+
+  user_options_session_auto (hashcat_ctx);
 
   /**
    * event init (needed for logging so should be first)
@@ -1115,10 +1152,6 @@ int hashcat_session_execute (hashcat_ctx_t *hashcat_ctx)
 
   unlink_restore (hashcat_ctx);
 
-  // unlink the pidfile
-
-  unlink_pidfile (hashcat_ctx);
-
   // final update dictionary cache
 
   dictstat_write (hashcat_ctx);
@@ -1212,7 +1245,7 @@ int hashcat_get_status (hashcat_ctx_t *hashcat_ctx, hashcat_status_t *hashcat_st
 
   memset (hashcat_status, 0, sizeof (hashcat_status_t));
 
-  if (status_ctx == NULL) return -1; // ways too early
+  if (status_ctx == NULL) return -1; // way too early
 
   if (status_ctx->accessible == false)
   {

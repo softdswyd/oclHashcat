@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _RIPEMD160_
-
 #include "inc_vendor.cl"
 #include "inc_hash_constants.h"
 #include "inc_hash_functions.cl"
@@ -18,7 +16,7 @@
 #include "inc_truecrypt_crc32.cl"
 #include "inc_truecrypt_xts.cl"
 
-static void ripemd160_transform (const u32 w[16], u32 dgst[5])
+void ripemd160_transform (const u32 w[16], u32 dgst[5])
 {
   u32 a1 = dgst[0];
   u32 b1 = dgst[1];
@@ -215,7 +213,7 @@ static void ripemd160_transform (const u32 w[16], u32 dgst[5])
   dgst[4] = e;
 }
 
-static void hmac_run2 (const u32 w1[16], const u32 w2[16], const u32 ipad[5], const u32 opad[5], u32 dgst[5])
+void hmac_run2 (const u32 w1[16], const u32 w2[16], const u32 ipad[5], const u32 opad[5], u32 dgst[5])
 {
   dgst[0] = ipad[0];
   dgst[1] = ipad[1];
@@ -254,7 +252,7 @@ static void hmac_run2 (const u32 w1[16], const u32 w2[16], const u32 ipad[5], co
   ripemd160_transform (w, dgst);
 }
 
-static void hmac_run (u32 w[16], const u32 ipad[5], const u32 opad[5], u32 dgst[5])
+void hmac_run (u32 w[16], const u32 ipad[5], const u32 opad[5], u32 dgst[5])
 {
   dgst[0] = ipad[0];
   dgst[1] = ipad[1];
@@ -290,7 +288,7 @@ static void hmac_run (u32 w[16], const u32 ipad[5], const u32 opad[5], u32 dgst[
   ripemd160_transform (w, dgst);
 }
 
-static void hmac_init (u32 w[16], u32 ipad[5], u32 opad[5])
+void hmac_init (u32 w[16], u32 ipad[5], u32 opad[5])
 {
   w[ 0] ^= 0x36363636;
   w[ 1] ^= 0x36363636;
@@ -343,7 +341,7 @@ static void hmac_init (u32 w[16], u32 ipad[5], u32 opad[5])
   ripemd160_transform (w, opad);
 }
 
-static u32 u8add (const u32 a, const u32 b)
+u32 u8add (const u32 a, const u32 b)
 {
   const u32 a1 = (a >>  0) & 0xff;
   const u32 a2 = (a >>  8) & 0xff;
@@ -410,22 +408,22 @@ __kernel void m06212_init (__global pw_t *pws, __global const kernel_rule_t *rul
    * keyfile
    */
 
-  w0[0] = u8add (w0[0], esalt_bufs[salt_pos].keyfile_buf[ 0]);
-  w0[1] = u8add (w0[1], esalt_bufs[salt_pos].keyfile_buf[ 1]);
-  w0[2] = u8add (w0[2], esalt_bufs[salt_pos].keyfile_buf[ 2]);
-  w0[3] = u8add (w0[3], esalt_bufs[salt_pos].keyfile_buf[ 3]);
-  w1[0] = u8add (w1[0], esalt_bufs[salt_pos].keyfile_buf[ 4]);
-  w1[1] = u8add (w1[1], esalt_bufs[salt_pos].keyfile_buf[ 5]);
-  w1[2] = u8add (w1[2], esalt_bufs[salt_pos].keyfile_buf[ 6]);
-  w1[3] = u8add (w1[3], esalt_bufs[salt_pos].keyfile_buf[ 7]);
-  w2[0] = u8add (w2[0], esalt_bufs[salt_pos].keyfile_buf[ 8]);
-  w2[1] = u8add (w2[1], esalt_bufs[salt_pos].keyfile_buf[ 9]);
-  w2[2] = u8add (w2[2], esalt_bufs[salt_pos].keyfile_buf[10]);
-  w2[3] = u8add (w2[3], esalt_bufs[salt_pos].keyfile_buf[11]);
-  w3[0] = u8add (w3[0], esalt_bufs[salt_pos].keyfile_buf[12]);
-  w3[1] = u8add (w3[1], esalt_bufs[salt_pos].keyfile_buf[13]);
-  w3[2] = u8add (w3[2], esalt_bufs[salt_pos].keyfile_buf[14]);
-  w3[3] = u8add (w3[3], esalt_bufs[salt_pos].keyfile_buf[15]);
+  w0[0] = u8add (w0[0], esalt_bufs[digests_offset].keyfile_buf[ 0]);
+  w0[1] = u8add (w0[1], esalt_bufs[digests_offset].keyfile_buf[ 1]);
+  w0[2] = u8add (w0[2], esalt_bufs[digests_offset].keyfile_buf[ 2]);
+  w0[3] = u8add (w0[3], esalt_bufs[digests_offset].keyfile_buf[ 3]);
+  w1[0] = u8add (w1[0], esalt_bufs[digests_offset].keyfile_buf[ 4]);
+  w1[1] = u8add (w1[1], esalt_bufs[digests_offset].keyfile_buf[ 5]);
+  w1[2] = u8add (w1[2], esalt_bufs[digests_offset].keyfile_buf[ 6]);
+  w1[3] = u8add (w1[3], esalt_bufs[digests_offset].keyfile_buf[ 7]);
+  w2[0] = u8add (w2[0], esalt_bufs[digests_offset].keyfile_buf[ 8]);
+  w2[1] = u8add (w2[1], esalt_bufs[digests_offset].keyfile_buf[ 9]);
+  w2[2] = u8add (w2[2], esalt_bufs[digests_offset].keyfile_buf[10]);
+  w2[3] = u8add (w2[3], esalt_bufs[digests_offset].keyfile_buf[11]);
+  w3[0] = u8add (w3[0], esalt_bufs[digests_offset].keyfile_buf[12]);
+  w3[1] = u8add (w3[1], esalt_bufs[digests_offset].keyfile_buf[13]);
+  w3[2] = u8add (w3[2], esalt_bufs[digests_offset].keyfile_buf[14]);
+  w3[3] = u8add (w3[3], esalt_bufs[digests_offset].keyfile_buf[15]);
 
   /**
    * salt
@@ -433,22 +431,22 @@ __kernel void m06212_init (__global pw_t *pws, __global const kernel_rule_t *rul
 
   u32 salt_buf1[16];
 
-  salt_buf1[ 0] = esalt_bufs[salt_pos].salt_buf[ 0];
-  salt_buf1[ 1] = esalt_bufs[salt_pos].salt_buf[ 1];
-  salt_buf1[ 2] = esalt_bufs[salt_pos].salt_buf[ 2];
-  salt_buf1[ 3] = esalt_bufs[salt_pos].salt_buf[ 3];
-  salt_buf1[ 4] = esalt_bufs[salt_pos].salt_buf[ 4];
-  salt_buf1[ 5] = esalt_bufs[salt_pos].salt_buf[ 5];
-  salt_buf1[ 6] = esalt_bufs[salt_pos].salt_buf[ 6];
-  salt_buf1[ 7] = esalt_bufs[salt_pos].salt_buf[ 7];
-  salt_buf1[ 8] = esalt_bufs[salt_pos].salt_buf[ 8];
-  salt_buf1[ 9] = esalt_bufs[salt_pos].salt_buf[ 9];
-  salt_buf1[10] = esalt_bufs[salt_pos].salt_buf[10];
-  salt_buf1[11] = esalt_bufs[salt_pos].salt_buf[11];
-  salt_buf1[12] = esalt_bufs[salt_pos].salt_buf[12];
-  salt_buf1[13] = esalt_bufs[salt_pos].salt_buf[13];
-  salt_buf1[14] = esalt_bufs[salt_pos].salt_buf[14];
-  salt_buf1[15] = esalt_bufs[salt_pos].salt_buf[15];
+  salt_buf1[ 0] = esalt_bufs[digests_offset].salt_buf[ 0];
+  salt_buf1[ 1] = esalt_bufs[digests_offset].salt_buf[ 1];
+  salt_buf1[ 2] = esalt_bufs[digests_offset].salt_buf[ 2];
+  salt_buf1[ 3] = esalt_bufs[digests_offset].salt_buf[ 3];
+  salt_buf1[ 4] = esalt_bufs[digests_offset].salt_buf[ 4];
+  salt_buf1[ 5] = esalt_bufs[digests_offset].salt_buf[ 5];
+  salt_buf1[ 6] = esalt_bufs[digests_offset].salt_buf[ 6];
+  salt_buf1[ 7] = esalt_bufs[digests_offset].salt_buf[ 7];
+  salt_buf1[ 8] = esalt_bufs[digests_offset].salt_buf[ 8];
+  salt_buf1[ 9] = esalt_bufs[digests_offset].salt_buf[ 9];
+  salt_buf1[10] = esalt_bufs[digests_offset].salt_buf[10];
+  salt_buf1[11] = esalt_bufs[digests_offset].salt_buf[11];
+  salt_buf1[12] = esalt_bufs[digests_offset].salt_buf[12];
+  salt_buf1[13] = esalt_bufs[digests_offset].salt_buf[13];
+  salt_buf1[14] = esalt_bufs[digests_offset].salt_buf[14];
+  salt_buf1[15] = esalt_bufs[digests_offset].salt_buf[15];
 
   u32 salt_buf2[16];
 
@@ -652,23 +650,27 @@ __kernel void m06212_comp (__global pw_t *pws, __global const kernel_rule_t *rul
 
   #else
 
-  __constant u32 *s_td0 = td0;
-  __constant u32 *s_td1 = td1;
-  __constant u32 *s_td2 = td2;
-  __constant u32 *s_td3 = td3;
-  __constant u32 *s_td4 = td4;
+  __constant u32a *s_td0 = td0;
+  __constant u32a *s_td1 = td1;
+  __constant u32a *s_td2 = td2;
+  __constant u32a *s_td3 = td3;
+  __constant u32a *s_td4 = td4;
 
-  __constant u32 *s_te0 = te0;
-  __constant u32 *s_te1 = te1;
-  __constant u32 *s_te2 = te2;
-  __constant u32 *s_te3 = te3;
-  __constant u32 *s_te4 = te4;
+  __constant u32a *s_te0 = te0;
+  __constant u32a *s_te1 = te1;
+  __constant u32a *s_te2 = te2;
+  __constant u32a *s_te3 = te3;
+  __constant u32a *s_te4 = te4;
 
   #endif
 
   if (gid >= gid_max) return;
 
+  #if defined (IS_APPLE) && defined (IS_GPU)
+  volatile u32 ukey1[8];
+  #else
   u32 ukey1[8];
+  #endif
 
   ukey1[0] = tmps[gid].out[ 0];
   ukey1[1] = tmps[gid].out[ 1];
@@ -679,7 +681,11 @@ __kernel void m06212_comp (__global pw_t *pws, __global const kernel_rule_t *rul
   ukey1[6] = tmps[gid].out[ 6];
   ukey1[7] = tmps[gid].out[ 7];
 
+  #if defined (IS_APPLE) && defined (IS_GPU)
+  volatile u32 ukey2[8];
+  #else
   u32 ukey2[8];
+  #endif
 
   ukey2[0] = tmps[gid].out[ 8];
   ukey2[1] = tmps[gid].out[ 9];
@@ -692,20 +698,24 @@ __kernel void m06212_comp (__global pw_t *pws, __global const kernel_rule_t *rul
 
   if (verify_header_aes (esalt_bufs, ukey1, ukey2, s_te0, s_te1, s_te2, s_te3, s_te4, s_td0, s_td1, s_td2, s_td3, s_td4) == 1)
   {
-    mark_hash (plains_buf, d_return_buf, salt_pos, 0, 0, gid, 0);
+    mark_hash (plains_buf, d_return_buf, salt_pos, digests_cnt, 0, 0, gid, 0);
   }
 
   if (verify_header_serpent (esalt_bufs, ukey1, ukey2) == 1)
   {
-    mark_hash (plains_buf, d_return_buf, salt_pos, 0, 0, gid, 0);
+    mark_hash (plains_buf, d_return_buf, salt_pos, digests_cnt, 0, 0, gid, 0);
   }
 
   if (verify_header_twofish (esalt_bufs, ukey1, ukey2) == 1)
   {
-    mark_hash (plains_buf, d_return_buf, salt_pos, 0, 0, gid, 0);
+    mark_hash (plains_buf, d_return_buf, salt_pos, digests_cnt, 0, 0, gid, 0);
   }
 
+  #if defined (IS_APPLE) && defined (IS_GPU)
+  volatile u32 ukey3[8];
+  #else
   u32 ukey3[8];
+  #endif
 
   ukey3[0] = tmps[gid].out[16];
   ukey3[1] = tmps[gid].out[17];
@@ -716,7 +726,11 @@ __kernel void m06212_comp (__global pw_t *pws, __global const kernel_rule_t *rul
   ukey3[6] = tmps[gid].out[22];
   ukey3[7] = tmps[gid].out[23];
 
+  #if defined (IS_APPLE) && defined (IS_GPU)
+  volatile u32 ukey4[8];
+  #else
   u32 ukey4[8];
+  #endif
 
   ukey4[0] = tmps[gid].out[24];
   ukey4[1] = tmps[gid].out[25];
@@ -729,16 +743,16 @@ __kernel void m06212_comp (__global pw_t *pws, __global const kernel_rule_t *rul
 
   if (verify_header_aes_twofish (esalt_bufs, ukey1, ukey2, ukey3, ukey4, s_te0, s_te1, s_te2, s_te3, s_te4, s_td0, s_td1, s_td2, s_td3, s_td4) == 1)
   {
-    mark_hash (plains_buf, d_return_buf, salt_pos, 0, 0, gid, 0);
+    mark_hash (plains_buf, d_return_buf, salt_pos, digests_cnt, 0, 0, gid, 0);
   }
 
   if (verify_header_serpent_aes (esalt_bufs, ukey1, ukey2, ukey3, ukey4, s_te0, s_te1, s_te2, s_te3, s_te4, s_td0, s_td1, s_td2, s_td3, s_td4) == 1)
   {
-    mark_hash (plains_buf, d_return_buf, salt_pos, 0, 0, gid, 0);
+    mark_hash (plains_buf, d_return_buf, salt_pos, digests_cnt, 0, 0, gid, 0);
   }
 
   if (verify_header_twofish_serpent (esalt_bufs, ukey1, ukey2, ukey3, ukey4) == 1)
   {
-    mark_hash (plains_buf, d_return_buf, salt_pos, 0, 0, gid, 0);
+    mark_hash (plains_buf, d_return_buf, salt_pos, digests_cnt, 0, 0, gid, 0);
   }
 }

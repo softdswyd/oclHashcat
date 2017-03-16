@@ -175,14 +175,21 @@ typedef struct pdf
 typedef struct wpa
 {
   u32  pke[25];
-  u32  eapol[64];
-  int  eapol_size;
-  int  keyver;
-  u8   orig_mac1[6];
-  u8   orig_mac2[6];
-  u8   orig_nonce1[32];
-  u8   orig_nonce2[32];
-  int  essid_reuse;
+  u32  eapol[64 + 16];
+  u16  eapol_len;
+  u8   message_pair;
+  int  message_pair_chgd;
+  u8   keyver;
+  u8   orig_mac_ap[6];
+  u8   orig_mac_sta[6];
+  u8   orig_nonce_ap[32];
+  u8   orig_nonce_sta[32];
+  u8   essid_len;
+  u8   essid[32];
+  u32  keymic[4];
+  u32  hash[4];
+  int  nonce_compare;
+  int  nonce_error_corrections;
 
 } wpa_t;
 
@@ -809,22 +816,44 @@ typedef struct struct_psafe2_hdr
 
 } psafe2_hdr;
 
-typedef struct hccap
+typedef enum
 {
-  char essid[36];
+  MESSAGE_PAIR_M12E2 = 0,
+  MESSAGE_PAIR_M14E4 = 1,
+  MESSAGE_PAIR_M32E2 = 2,
+  MESSAGE_PAIR_M32E3 = 3,
+  MESSAGE_PAIR_M34E3 = 4,
+  MESSAGE_PAIR_M34E4 = 5,
 
-  u8   mac1[6];
-  u8   mac2[6];
-  u8   nonce1[32];
-  u8   nonce2[32];
+} message_pair_t;
 
-  u8   eapol[256];
-  int  eapol_size;
+#define HCCAPX_VERSION   4
+#define HCCAPX_SIGNATURE 0x58504348 // HCPX
 
-  int  keyver;
-  u8   keymic[16];
+// this is required to force mingw to accept the packed attribute
+#pragma pack(push,1)
 
-} hccap_t;
+struct hccapx
+{
+  u32 signature;
+  u32 version;
+  u8  message_pair;
+  u8  essid_len;
+  u8  essid[32];
+  u8  keyver;
+  u8  keymic[16];
+  u8  mac_ap[6];
+  u8  nonce_ap[32];
+  u8  mac_sta[6];
+  u8  nonce_sta[32];
+  u16 eapol_len;
+  u8  eapol[256];
+
+} __attribute__((packed));
+
+typedef struct hccapx hccapx_t;
+
+#pragma pack(pop)
 
 /**
  * hashtypes enums
@@ -1217,6 +1246,8 @@ typedef enum display_len
   DISPLAY_LEN_MAX_4521  = 40 + 1 + 32,
   DISPLAY_LEN_MIN_4522  = 40 + 1 + 12,
   DISPLAY_LEN_MAX_4522  = 40 + 1 + 12,
+  DISPLAY_LEN_MIN_12001 = 9 + 64,
+  DISPLAY_LEN_MAX_12001 = 9 + 64,
 
 } display_len_t;
 
@@ -1338,6 +1369,7 @@ typedef enum kern_type
   KERN_TYPE_BCRYPT                  = 3200,
   KERN_TYPE_MD5_SLT_MD5_PW          = 3710,
   KERN_TYPE_MD5_SLT_PW_SLT          = 3800,
+  KERN_TYPE_MD55_PWSLT              = 3910,
   KERN_TYPE_MD5_SLT_MD5_SLT_PW      = 4010,
   KERN_TYPE_MD5_SLT_MD5_PW_SLT      = 4110,
   KERN_TYPE_MD5U5                   = 4300,
@@ -1533,6 +1565,7 @@ typedef enum rounds_count
    ROUNDS_ITUNES9_BACKUP     = 10000,
    ROUNDS_ITUNES101_BACKUP   = 10000000, // wtf, i mean, really?
    ROUNDS_ITUNES102_BACKUP   = 10000,
+   ROUNDS_ATLASSIAN          = 10000,
    ROUNDS_STDOUT             = 0
 
 } rounds_count_t;
@@ -1707,6 +1740,7 @@ int skip32_parse_hash             (u8 *input_buf, u32 input_len, hash_t *hash_bu
 int fortigate_parse_hash          (u8 *input_buf, u32 input_len, hash_t *hash_buf, MAYBE_UNUSED const hashconfig_t *hashconfig);
 int sha256b64s_parse_hash         (u8 *input_buf, u32 input_len, hash_t *hash_buf, MAYBE_UNUSED const hashconfig_t *hashconfig);
 int filezilla_server_parse_hash   (u8 *input_buf, u32 input_len, hash_t *hash_buf, MAYBE_UNUSED const hashconfig_t *hashconfig);
+int atlassian_parse_hash          (u8 *input_buf, u32 input_len, hash_t *hash_buf, MAYBE_UNUSED const hashconfig_t *hashconfig);
 
 /**
  * hook functions
@@ -1722,9 +1756,8 @@ char *stroptitype (const u32 opti_type);
 char *strhashtype (const u32 hash_mode);
 char *strparser   (const u32 parser_status);
 
-void to_hccap_t (hashcat_ctx_t *hashcat_ctx, hccap_t *hccap, const u32 salt_pos, const u32 digest_pos);
-
-void wpa_essid_reuse (hashcat_ctx_t *hashcat_ctx);
+int check_old_hccap (const char *hashfile);
+void to_hccapx_t (hashcat_ctx_t *hashcat_ctx, hccapx_t *hccapx, const u32 salt_pos, const u32 digest_pos);
 
 int ascii_digest (hashcat_ctx_t *hashcat_ctx, char *out_buf, const size_t out_len, const u32 salt_pos, const u32 digest_pos);
 

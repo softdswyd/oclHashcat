@@ -8,16 +8,10 @@
 
 #define PROGNAME "hashcat"
 
-#if   defined (__linux__) || defined (__CYGWIN__)
+#if   defined (__unix__) || defined (__APPLE__)
 #define _POSIX
-#elif defined (__APPLE__)
-#define _POSIX
-#elif defined (__FreeBSD__)
-#define _POSIX
-#elif defined (_WIN32) || defined (_WIN64)
+#elif defined (__WINNT__)
 #define _WIN 1
-#define WIN 1
-#define _POSIX_THREAD_SAFE_FUNCTIONS 200112L //for *time_r functions
 #else
 #error Your Operating System is not supported or detected
 #endif
@@ -26,7 +20,19 @@
 #define _GNU_SOURCE
 #endif
 
+// needed for *time_r functions under MinGW
+#ifndef _POSIX_THREAD_SAFE_FUNCTIONS
+#define _POSIX_THREAD_SAFE_FUNCTIONS 200809L
+#endif
+
+// needed for 64-bit off_t on 32-bit OSes
+#ifndef _FILE_OFFSET_BITS
 #define _FILE_OFFSET_BITS 64
+#endif
+
+#ifndef _FORTIFY_SOURCE
+#define _FORTIFY_SOURCE 2
+#endif
 
 #define NOMINMAX 1
 
@@ -34,6 +40,7 @@
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
 
 #define CEIL(a) ((a - (int) (a)) > 0 ? a + 1 : a)
+#define CEILDIV(a,b) (((a) + (b) - 1) / (b))
 
 #if defined (__APPLE__)
 #define __stdcall

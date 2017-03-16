@@ -1,6 +1,6 @@
 ## *hashcat* ##
 
-**hashcat** is the world's fastest and most advanced password recovery utility, supporting five unique modes of attack for over 160 highly-optimized hashing algorithms. hashcat currently supports CPU's, GPU's and other hardware-accelerators on Linux, Windows and OSX, and has facilities to help enable distributed password cracking.
+**hashcat** is the world's fastest and most advanced password recovery utility, supporting five unique modes of attack for over 200 highly-optimized hashing algorithms. hashcat currently supports CPUs, GPUs, and other hardware accelerators on Linux, Windows, and OSX, and has facilities to help enable distributed password cracking.
 
 ### License ###
 
@@ -16,9 +16,13 @@ Please refer to the [Hashcat Wiki](https://hashcat.net/wiki/) and the output of 
 
 ### Building ###
 
-[![Hashcat Build status](https://travis-ci.org/hashcat/hashcat.svg?branch=master)](https://travis-ci.org/hashcat/hashcat)
-
 Refer to [BUILD.md](BUILD.md) for instructions on how to build **hashcat** from source.
+
+Tests:  
+
+Travis | Appveyor | Coverity
+------ | -------- | --------
+[![Hashcat Travis Build status](https://travis-ci.org/hashcat/hashcat.svg?branch=master)](https://travis-ci.org/hashcat/hashcat) | [![Hashcat Appveyor Build status](https://ci.appveyor.com/api/projects/status/github/hashcat/hashcat?branch=master&svg=true)](https://ci.appveyor.com/project/jsteube/hashcat) | [![Coverity Scan Build Status](https://scan.coverity.com/projects/11753/badge.svg)](https://scan.coverity.com/projects/hashcat)
 
 ### Contributing ###
 
@@ -30,7 +34,7 @@ Contributions are welcome and encouraged, provided your code is of sufficient qu
 4. Uses [Allman-style](https://en.wikipedia.org/wiki/Indent_style#Allman_style) code blocks & indentation 
 5. Uses 2-spaces as indentation or a tab if it's required (for example: Makefiles)
 6. Uses lower-case function and variable names 
-7. Avoids the use of `!` and uses positive conditionals wherever possible (e.g., `if (foo == 0)` instead of `if (!foo)`, and `if (foo)` instead of `if (foo !=0)`)
+7. Avoids the use of `!` and uses positive conditionals wherever possible (e.g., `if (foo == 0)` instead of `if (!foo)`, and `if (foo)` instead of `if (foo != 0)`)
 8. Use code like array[index + 0] if you also need to do array[index + 1], to keep it aligned
 
 You can use GNU Indent to help assist you with the style requirements:

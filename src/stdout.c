@@ -27,18 +27,18 @@ static void out_push (out_t *out, const u8 *pw_buf, const int pw_len)
 
   memcpy (ptr, pw_buf, pw_len);
 
-  #if defined (_POSIX)
-
-  ptr[pw_len] = '\n';
-
-  out->len += pw_len + 1;
-
-  #else
+  #if defined (_WIN)
 
   ptr[pw_len + 0] = '\r';
   ptr[pw_len + 1] = '\n';
 
   out->len += pw_len + 2;
+
+  #else
+
+  ptr[pw_len] = '\n';
+
+  out->len += pw_len + 1;
 
   #endif
 
@@ -69,7 +69,7 @@ int process_stdout (hashcat_ctx_t *hashcat_ctx, hc_device_param_t *device_param,
 
     if (fp == NULL)
     {
-      event_log_error (hashcat_ctx, "%s: %m", filename);
+      event_log_error (hashcat_ctx, "%s: %s", filename, strerror (errno));
 
       return -1;
     }
@@ -78,7 +78,7 @@ int process_stdout (hashcat_ctx_t *hashcat_ctx, hc_device_param_t *device_param,
     {
       fclose (fp);
 
-      event_log_error (hashcat_ctx, "%s: %m", filename);
+      event_log_error (hashcat_ctx, "%s: %s", filename, strerror (errno));
 
       return -1;
     }

@@ -76,7 +76,7 @@ int tuning_db_init (hashcat_ctx_t *hashcat_ctx)
 
   if (fp == NULL)
   {
-    event_log_error (hashcat_ctx, "%s: %m", tuning_db_file);
+    event_log_error (hashcat_ctx, "%s: %s", tuning_db_file, strerror (errno));
 
     return -1;
   }
@@ -119,7 +119,7 @@ int tuning_db_init (hashcat_ctx_t *hashcat_ctx)
 
     int token_cnt = 0;
 
-    char *saveptr = NULL;
+    char *saveptr;
 
     char *next = strtok_r (line_buf, "\t ", &saveptr);
 

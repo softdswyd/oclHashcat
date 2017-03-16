@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _MD5_
-
 #include "inc_vendor.cl"
 #include "inc_hash_constants.h"
 #include "inc_hash_functions.cl"
@@ -14,7 +12,7 @@
 #define COMPARE_S "inc_comp_single.cl"
 #define COMPARE_M "inc_comp_multi.cl"
 
-__constant u32 padding[8] =
+__constant u32a padding[8] =
 {
   0x5e4ebf28,
   0x418a754e,
@@ -34,7 +32,7 @@ typedef struct
 
 } RC4_KEY;
 
-static void swap (__local RC4_KEY *rc4_key, const u8 i, const u8 j)
+void swap (__local RC4_KEY *rc4_key, const u8 i, const u8 j)
 {
   u8 tmp;
 
@@ -43,7 +41,7 @@ static void swap (__local RC4_KEY *rc4_key, const u8 i, const u8 j)
   rc4_key->S[j] = tmp;
 }
 
-static void rc4_init_16 (__local RC4_KEY *rc4_key, const u32 data[4])
+void rc4_init_16 (__local RC4_KEY *rc4_key, const u32 data[4])
 {
   u32 v = 0x03020100;
   u32 a = 0x04040404;
@@ -99,7 +97,7 @@ static void rc4_init_16 (__local RC4_KEY *rc4_key, const u32 data[4])
   }
 }
 
-static u8 rc4_next_16 (__local RC4_KEY *rc4_key, u8 i, u8 j, const u32 in[4], u32 out[4])
+u8 rc4_next_16 (__local RC4_KEY *rc4_key, u8 i, u8 j, const u32 in[4], u32 out[4])
 {
   #ifdef _unroll
   #pragma unroll
@@ -152,7 +150,7 @@ static u8 rc4_next_16 (__local RC4_KEY *rc4_key, u8 i, u8 j, const u32 in[4], u3
   return j;
 }
 
-static void md5_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[4])
+void md5_transform (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[4])
 {
   u32 a = digest[0];
   u32 b = digest[1];
@@ -297,48 +295,48 @@ __kernel void m10500_init (__global pw_t *pws, __global const kernel_rule_t *rul
 
   u32 o_buf[8];
 
-  o_buf[0] = pdf_bufs[salt_pos].o_buf[0];
-  o_buf[1] = pdf_bufs[salt_pos].o_buf[1];
-  o_buf[2] = pdf_bufs[salt_pos].o_buf[2];
-  o_buf[3] = pdf_bufs[salt_pos].o_buf[3];
-  o_buf[4] = pdf_bufs[salt_pos].o_buf[4];
-  o_buf[5] = pdf_bufs[salt_pos].o_buf[5];
-  o_buf[6] = pdf_bufs[salt_pos].o_buf[6];
-  o_buf[7] = pdf_bufs[salt_pos].o_buf[7];
+  o_buf[0] = pdf_bufs[digests_offset].o_buf[0];
+  o_buf[1] = pdf_bufs[digests_offset].o_buf[1];
+  o_buf[2] = pdf_bufs[digests_offset].o_buf[2];
+  o_buf[3] = pdf_bufs[digests_offset].o_buf[3];
+  o_buf[4] = pdf_bufs[digests_offset].o_buf[4];
+  o_buf[5] = pdf_bufs[digests_offset].o_buf[5];
+  o_buf[6] = pdf_bufs[digests_offset].o_buf[6];
+  o_buf[7] = pdf_bufs[digests_offset].o_buf[7];
 
-  u32 P = pdf_bufs[salt_pos].P;
+  u32 P = pdf_bufs[digests_offset].P;
 
   u32 id_buf[12];
 
-  id_buf[ 0] = pdf_bufs[salt_pos].id_buf[0];
-  id_buf[ 1] = pdf_bufs[salt_pos].id_buf[1];
-  id_buf[ 2] = pdf_bufs[salt_pos].id_buf[2];
-  id_buf[ 3] = pdf_bufs[salt_pos].id_buf[3];
+  id_buf[ 0] = pdf_bufs[digests_offset].id_buf[0];
+  id_buf[ 1] = pdf_bufs[digests_offset].id_buf[1];
+  id_buf[ 2] = pdf_bufs[digests_offset].id_buf[2];
+  id_buf[ 3] = pdf_bufs[digests_offset].id_buf[3];
 
-  id_buf[ 4] = pdf_bufs[salt_pos].id_buf[4];
-  id_buf[ 5] = pdf_bufs[salt_pos].id_buf[5];
-  id_buf[ 6] = pdf_bufs[salt_pos].id_buf[6];
-  id_buf[ 7] = pdf_bufs[salt_pos].id_buf[7];
+  id_buf[ 4] = pdf_bufs[digests_offset].id_buf[4];
+  id_buf[ 5] = pdf_bufs[digests_offset].id_buf[5];
+  id_buf[ 6] = pdf_bufs[digests_offset].id_buf[6];
+  id_buf[ 7] = pdf_bufs[digests_offset].id_buf[7];
 
   id_buf[ 8] = 0;
   id_buf[ 9] = 0;
   id_buf[10] = 0;
   id_buf[11] = 0;
 
-  u32 id_len  = pdf_bufs[salt_pos].id_len;
+  u32 id_len  = pdf_bufs[digests_offset].id_len;
   u32 id_len4 = id_len / 4;
 
   u32 rc4data[2];
 
-  rc4data[0] = pdf_bufs[salt_pos].rc4data[0];
-  rc4data[1] = pdf_bufs[salt_pos].rc4data[1];
+  rc4data[0] = pdf_bufs[digests_offset].rc4data[0];
+  rc4data[1] = pdf_bufs[digests_offset].rc4data[1];
 
   u32 final_length = 68 + id_len;
 
   u32 w11 = 0x80;
   u32 w12 = 0;
 
-  if (pdf_bufs[salt_pos].enc_md != 1)
+  if (pdf_bufs[digests_offset].enc_md != 1)
   {
     w11 = 0xffffffff;
     w12 = 0x80;

@@ -16,11 +16,7 @@ int sort_by_dictstat (const void *s1, const void *s2)
   dictstat_t *d1 = (dictstat_t *) s1;
   dictstat_t *d2 = (dictstat_t *) s2;
 
-  #if defined (__linux__) || defined (__CYGWIN__)
-  d2->stat.st_atim = d1->stat.st_atim;
-  #else
   d2->stat.st_atime = d1->stat.st_atime;
-  #endif
 
   return memcmp (&d1->stat, &d2->stat, sizeof (struct stat));
 }
@@ -112,7 +108,7 @@ int dictstat_write (hashcat_ctx_t *hashcat_ctx)
 
   if (fp == NULL)
   {
-    event_log_error (hashcat_ctx, "%s: %m", dictstat_ctx->filename);
+    event_log_error (hashcat_ctx, "%s: %s", dictstat_ctx->filename, strerror (errno));
 
     return -1;
   }
@@ -121,7 +117,7 @@ int dictstat_write (hashcat_ctx_t *hashcat_ctx)
   {
     fclose (fp);
 
-    event_log_error (hashcat_ctx, "%s: %m", dictstat_ctx->filename);
+    event_log_error (hashcat_ctx, "%s: %s", dictstat_ctx->filename, strerror (errno));
 
     return -1;
   }

@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _MD5_
-
 #define NEW_SIMD_CODE
 
 #include "inc_vendor.cl"
@@ -16,7 +14,7 @@
 #include "inc_rp.cl"
 #include "inc_simd.cl"
 
-static void md5_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[4])
+void md5_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[4])
 {
   u32x a = digest[0];
   u32x b = digest[1];
@@ -114,7 +112,7 @@ static void md5_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4],
   digest[3] += d;
 }
 
-static void hmac_md5_pad (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4])
+void hmac_md5_pad (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4])
 {
   w0[0] = w0[0] ^ 0x36363636;
   w0[1] = w0[1] ^ 0x36363636;
@@ -165,7 +163,7 @@ static void hmac_md5_pad (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x i
   md5_transform (w0, w1, w2, w3, opad);
 }
 
-static void hmac_md5_run (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4], u32x digest[4])
+void hmac_md5_run (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[4], u32x opad[4], u32x digest[4])
 {
   digest[0] = ipad[0];
   digest[1] = ipad[1];
@@ -217,7 +215,7 @@ __kernel void m05300_m04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 16; i += lsz)
   {
-    w_s[i] = ikepsk_bufs[salt_pos].nr_buf[i];
+    w_s[i] = ikepsk_bufs[digests_offset].nr_buf[i];
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -226,7 +224,7 @@ __kernel void m05300_m04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 128; i += lsz)
   {
-    s_msg_buf[i] = ikepsk_bufs[salt_pos].msg_buf[i];
+    s_msg_buf[i] = ikepsk_bufs[digests_offset].msg_buf[i];
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -255,8 +253,8 @@ __kernel void m05300_m04 (__global pw_t *pws, __global const kernel_rule_t *rule
    * salt
    */
 
-  const u32 nr_len  = ikepsk_bufs[salt_pos].nr_len;
-  const u32 msg_len = ikepsk_bufs[salt_pos].msg_len;
+  const u32 nr_len  = ikepsk_bufs[digests_offset].nr_len;
+  const u32 msg_len = ikepsk_bufs[digests_offset].msg_len;
 
   /**
    * loop
@@ -323,7 +321,7 @@ __kernel void m05300_m04 (__global pw_t *pws, __global const kernel_rule_t *rule
     int left;
     int off;
 
-    for (left = ikepsk_bufs[salt_pos].msg_len, off = 0; left >= 56; left -= 64, off += 16)
+    for (left = ikepsk_bufs[digests_offset].msg_len, off = 0; left >= 56; left -= 64, off += 16)
     {
       w0[0] = s_msg_buf[off +  0];
       w0[1] = s_msg_buf[off +  1];
@@ -394,7 +392,7 @@ __kernel void m05300_s04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 16; i += lsz)
   {
-    w_s[i] = ikepsk_bufs[salt_pos].nr_buf[i];
+    w_s[i] = ikepsk_bufs[digests_offset].nr_buf[i];
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -403,7 +401,7 @@ __kernel void m05300_s04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
   for (u32 i = lid; i < 128; i += lsz)
   {
-    s_msg_buf[i] = ikepsk_bufs[salt_pos].msg_buf[i];
+    s_msg_buf[i] = ikepsk_bufs[digests_offset].msg_buf[i];
   }
 
   barrier (CLK_LOCAL_MEM_FENCE);
@@ -432,8 +430,8 @@ __kernel void m05300_s04 (__global pw_t *pws, __global const kernel_rule_t *rule
    * salt
    */
 
-  const u32 nr_len  = ikepsk_bufs[salt_pos].nr_len;
-  const u32 msg_len = ikepsk_bufs[salt_pos].msg_len;
+  const u32 nr_len  = ikepsk_bufs[digests_offset].nr_len;
+  const u32 msg_len = ikepsk_bufs[digests_offset].msg_len;
 
   /**
    * digest
@@ -512,7 +510,7 @@ __kernel void m05300_s04 (__global pw_t *pws, __global const kernel_rule_t *rule
     int left;
     int off;
 
-    for (left = ikepsk_bufs[salt_pos].msg_len, off = 0; left >= 56; left -= 64, off += 16)
+    for (left = ikepsk_bufs[digests_offset].msg_len, off = 0; left >= 56; left -= 64, off += 16)
     {
       w0[0] = s_msg_buf[off +  0];
       w0[1] = s_msg_buf[off +  1];

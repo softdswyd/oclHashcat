@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _LUKS_
-
 #define NEW_SIMD_CODE
 
 #include "inc_vendor.cl"
@@ -27,7 +25,7 @@
 
 #define MAX_ENTROPY 7.0
 
-static void sha1_transform_S (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[5])
+void sha1_transform_S (const u32 w0[4], const u32 w1[4], const u32 w2[4], const u32 w3[4], u32 digest[5])
 {
   u32 A = digest[0];
   u32 B = digest[1];
@@ -155,7 +153,7 @@ static void sha1_transform_S (const u32 w0[4], const u32 w1[4], const u32 w2[4],
   digest[4] += E;
 }
 
-static void hmac_sha1_pad_S (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[5], u32 opad[5])
+void hmac_sha1_pad_S (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[5], u32 opad[5])
 {
   w0[0] = w0[0] ^ 0x36363636;
   w0[1] = w0[1] ^ 0x36363636;
@@ -208,7 +206,7 @@ static void hmac_sha1_pad_S (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipa
   sha1_transform_S (w0, w1, w2, w3, opad);
 }
 
-static void hmac_sha1_run_S (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[5], u32 opad[5], u32 digest[5])
+void hmac_sha1_run_S (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipad[5], u32 opad[5], u32 digest[5])
 {
   digest[0] = ipad[0];
   digest[1] = ipad[1];
@@ -244,7 +242,7 @@ static void hmac_sha1_run_S (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], u32 ipa
   sha1_transform_S (w0, w1, w2, w3, digest);
 }
 
-static void sha1_transform_V (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[5])
+void sha1_transform_V (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[5])
 {
   u32x A = digest[0];
   u32x B = digest[1];
@@ -372,7 +370,7 @@ static void sha1_transform_V (const u32x w0[4], const u32x w1[4], const u32x w2[
   digest[4] += E;
 }
 
-static void hmac_sha1_run_V (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[5], u32x opad[5], u32x digest[5])
+void hmac_sha1_run_V (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[5], u32x opad[5], u32x digest[5])
 {
   digest[0] = ipad[0];
   digest[1] = ipad[1];
@@ -464,7 +462,7 @@ __kernel void m14611_init (__global pw_t *pws, __global const kernel_rule_t *rul
   salt_buf1[2] = swap32_S (salt_bufs[salt_pos].salt_buf[6]);
   salt_buf1[3] = swap32_S (salt_bufs[salt_pos].salt_buf[7]);
 
-  u32 key_size = luks_bufs[salt_pos].key_size;
+  u32 key_size = luks_bufs[digests_offset].key_size;
 
   /**
    * pads
@@ -562,7 +560,7 @@ __kernel void m14611_loop (__global pw_t *pws, __global const kernel_rule_t *rul
   opad[3] = packv (tmps, opad32, gid, 3);
   opad[4] = packv (tmps, opad32, gid, 4);
 
-  u32 key_size = luks_bufs[salt_pos].key_size;
+  u32 key_size = luks_bufs[digests_offset].key_size;
 
   for (u32 i = 0; i < ((key_size / 8) / 4); i += 5)
   {
@@ -671,17 +669,17 @@ __kernel void m14611_comp (__global pw_t *pws, __global const kernel_rule_t *rul
 
   #else
 
-  __constant u32 *s_td0 = td0;
-  __constant u32 *s_td1 = td1;
-  __constant u32 *s_td2 = td2;
-  __constant u32 *s_td3 = td3;
-  __constant u32 *s_td4 = td4;
+  __constant u32a *s_td0 = td0;
+  __constant u32a *s_td1 = td1;
+  __constant u32a *s_td2 = td2;
+  __constant u32a *s_td3 = td3;
+  __constant u32a *s_td4 = td4;
 
-  __constant u32 *s_te0 = te0;
-  __constant u32 *s_te1 = te1;
-  __constant u32 *s_te2 = te2;
-  __constant u32 *s_te3 = te3;
-  __constant u32 *s_te4 = te4;
+  __constant u32a *s_te0 = te0;
+  __constant u32a *s_te1 = te1;
+  __constant u32a *s_te2 = te2;
+  __constant u32a *s_te3 = te3;
+  __constant u32a *s_te4 = te4;
 
   #endif
 
@@ -693,7 +691,7 @@ __kernel void m14611_comp (__global pw_t *pws, __global const kernel_rule_t *rul
 
   u32 pt_buf[128];
 
-  luks_af_sha1_then_aes_decrypt (&luks_bufs[salt_pos], &tmps[gid], pt_buf, s_te0, s_te1, s_te2, s_te3, s_te4, s_td0, s_td1, s_td2, s_td3, s_td4);
+  luks_af_sha1_then_aes_decrypt (&luks_bufs[digests_offset], &tmps[gid], pt_buf, s_te0, s_te1, s_te2, s_te3, s_te4, s_td0, s_td1, s_td2, s_td3, s_td4);
 
   // check entropy
 
@@ -701,6 +699,6 @@ __kernel void m14611_comp (__global pw_t *pws, __global const kernel_rule_t *rul
 
   if (entropy < MAX_ENTROPY)
   {
-    mark_hash (plains_buf, d_return_buf, salt_pos, 0, 0, gid, 0);
+    mark_hash (plains_buf, d_return_buf, salt_pos, digests_cnt, 0, 0, gid, 0);
   }
 }

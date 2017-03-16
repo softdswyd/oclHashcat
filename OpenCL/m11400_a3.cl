@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _MD5_
-
 //incompatible because of brances
 //#define NEW_SIMD_CODE
 
@@ -27,7 +25,7 @@
 #define uint_to_hex_lower8(i) (u32x) (l_bin2asc[(i).s0], l_bin2asc[(i).s1], l_bin2asc[(i).s2], l_bin2asc[(i).s3], l_bin2asc[(i).s4], l_bin2asc[(i).s5], l_bin2asc[(i).s6], l_bin2asc[(i).s7], l_bin2asc[(i).s8], l_bin2asc[(i).s9], l_bin2asc[(i).sa], l_bin2asc[(i).sb], l_bin2asc[(i).sc], l_bin2asc[(i).sd], l_bin2asc[(i).se], l_bin2asc[(i).sf])
 #endif
 
-static u32 memcat32 (u32x block0[16], u32x block1[16], const u32 block_len, const u32x append0[4], const u32x append1[4], const u32x append2[4], const u32x append3[4], const u32 append_len)
+u32 memcat32 (u32x block0[16], u32x block1[16], const u32 block_len, const u32x append0[4], const u32x append1[4], const u32x append2[4], const u32x append3[4], const u32 append_len)
 {
   const u32 mod = block_len & 3;
   const u32 div = block_len / 4;
@@ -748,7 +746,7 @@ static u32 memcat32 (u32x block0[16], u32x block1[16], const u32 block_len, cons
   return new_len;
 }
 
-static void m11400m_0_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
+void m11400m_0_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
 {
   /**
    * modifier
@@ -761,43 +759,43 @@ static void m11400m_0_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * salt
    */
 
-  const u32 salt_len = esalt_bufs[salt_pos].salt_len; // not a bug, we need to get it from the esalt
+  const u32 salt_len = esalt_bufs[digests_offset].salt_len; // not a bug, we need to get it from the esalt
 
   const u32 pw_salt_len = salt_len + pw_len;
 
   u32 salt_buf0[16];
   u32 salt_buf1[16];
 
-  salt_buf0[ 0] = esalt_bufs[salt_pos].salt_buf[ 0];
-  salt_buf0[ 1] = esalt_bufs[salt_pos].salt_buf[ 1];
-  salt_buf0[ 2] = esalt_bufs[salt_pos].salt_buf[ 2];
-  salt_buf0[ 3] = esalt_bufs[salt_pos].salt_buf[ 3];
-  salt_buf0[ 4] = esalt_bufs[salt_pos].salt_buf[ 4];
-  salt_buf0[ 5] = esalt_bufs[salt_pos].salt_buf[ 5];
-  salt_buf0[ 6] = esalt_bufs[salt_pos].salt_buf[ 6];
-  salt_buf0[ 7] = esalt_bufs[salt_pos].salt_buf[ 7];
-  salt_buf0[ 8] = esalt_bufs[salt_pos].salt_buf[ 8];
-  salt_buf0[ 9] = esalt_bufs[salt_pos].salt_buf[ 9];
-  salt_buf0[10] = esalt_bufs[salt_pos].salt_buf[10];
-  salt_buf0[11] = esalt_bufs[salt_pos].salt_buf[11];
-  salt_buf0[12] = esalt_bufs[salt_pos].salt_buf[12];
-  salt_buf0[13] = esalt_bufs[salt_pos].salt_buf[13];
-  salt_buf0[14] = esalt_bufs[salt_pos].salt_buf[14];
-  salt_buf0[15] = esalt_bufs[salt_pos].salt_buf[15];
-  salt_buf1[ 0] = esalt_bufs[salt_pos].salt_buf[16];
-  salt_buf1[ 1] = esalt_bufs[salt_pos].salt_buf[17];
-  salt_buf1[ 2] = esalt_bufs[salt_pos].salt_buf[18];
-  salt_buf1[ 3] = esalt_bufs[salt_pos].salt_buf[19];
-  salt_buf1[ 4] = esalt_bufs[salt_pos].salt_buf[20];
-  salt_buf1[ 5] = esalt_bufs[salt_pos].salt_buf[21];
-  salt_buf1[ 6] = esalt_bufs[salt_pos].salt_buf[22];
-  salt_buf1[ 7] = esalt_bufs[salt_pos].salt_buf[23];
-  salt_buf1[ 8] = esalt_bufs[salt_pos].salt_buf[24];
-  salt_buf1[ 9] = esalt_bufs[salt_pos].salt_buf[25];
-  salt_buf1[10] = esalt_bufs[salt_pos].salt_buf[26];
-  salt_buf1[11] = esalt_bufs[salt_pos].salt_buf[27];
-  salt_buf1[12] = esalt_bufs[salt_pos].salt_buf[28];
-  salt_buf1[13] = esalt_bufs[salt_pos].salt_buf[29];
+  salt_buf0[ 0] = esalt_bufs[digests_offset].salt_buf[ 0];
+  salt_buf0[ 1] = esalt_bufs[digests_offset].salt_buf[ 1];
+  salt_buf0[ 2] = esalt_bufs[digests_offset].salt_buf[ 2];
+  salt_buf0[ 3] = esalt_bufs[digests_offset].salt_buf[ 3];
+  salt_buf0[ 4] = esalt_bufs[digests_offset].salt_buf[ 4];
+  salt_buf0[ 5] = esalt_bufs[digests_offset].salt_buf[ 5];
+  salt_buf0[ 6] = esalt_bufs[digests_offset].salt_buf[ 6];
+  salt_buf0[ 7] = esalt_bufs[digests_offset].salt_buf[ 7];
+  salt_buf0[ 8] = esalt_bufs[digests_offset].salt_buf[ 8];
+  salt_buf0[ 9] = esalt_bufs[digests_offset].salt_buf[ 9];
+  salt_buf0[10] = esalt_bufs[digests_offset].salt_buf[10];
+  salt_buf0[11] = esalt_bufs[digests_offset].salt_buf[11];
+  salt_buf0[12] = esalt_bufs[digests_offset].salt_buf[12];
+  salt_buf0[13] = esalt_bufs[digests_offset].salt_buf[13];
+  salt_buf0[14] = esalt_bufs[digests_offset].salt_buf[14];
+  salt_buf0[15] = esalt_bufs[digests_offset].salt_buf[15];
+  salt_buf1[ 0] = esalt_bufs[digests_offset].salt_buf[16];
+  salt_buf1[ 1] = esalt_bufs[digests_offset].salt_buf[17];
+  salt_buf1[ 2] = esalt_bufs[digests_offset].salt_buf[18];
+  salt_buf1[ 3] = esalt_bufs[digests_offset].salt_buf[19];
+  salt_buf1[ 4] = esalt_bufs[digests_offset].salt_buf[20];
+  salt_buf1[ 5] = esalt_bufs[digests_offset].salt_buf[21];
+  salt_buf1[ 6] = esalt_bufs[digests_offset].salt_buf[22];
+  salt_buf1[ 7] = esalt_bufs[digests_offset].salt_buf[23];
+  salt_buf1[ 8] = esalt_bufs[digests_offset].salt_buf[24];
+  salt_buf1[ 9] = esalt_bufs[digests_offset].salt_buf[25];
+  salt_buf1[10] = esalt_bufs[digests_offset].salt_buf[26];
+  salt_buf1[11] = esalt_bufs[digests_offset].salt_buf[27];
+  salt_buf1[12] = esalt_bufs[digests_offset].salt_buf[28];
+  salt_buf1[13] = esalt_bufs[digests_offset].salt_buf[29];
   salt_buf1[14] = 0;
   salt_buf1[15] = 0;
 
@@ -805,43 +803,43 @@ static void m11400m_0_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * esalt
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
 
   u32 esalt_buf0[16];
   u32 esalt_buf1[16];
 
-  esalt_buf0[ 0] = esalt_bufs[salt_pos].esalt_buf[ 0];
-  esalt_buf0[ 1] = esalt_bufs[salt_pos].esalt_buf[ 1];
-  esalt_buf0[ 2] = esalt_bufs[salt_pos].esalt_buf[ 2];
-  esalt_buf0[ 3] = esalt_bufs[salt_pos].esalt_buf[ 3];
-  esalt_buf0[ 4] = esalt_bufs[salt_pos].esalt_buf[ 4];
-  esalt_buf0[ 5] = esalt_bufs[salt_pos].esalt_buf[ 5];
-  esalt_buf0[ 6] = esalt_bufs[salt_pos].esalt_buf[ 6];
-  esalt_buf0[ 7] = esalt_bufs[salt_pos].esalt_buf[ 7];
-  esalt_buf0[ 8] = esalt_bufs[salt_pos].esalt_buf[ 8];
-  esalt_buf0[ 9] = esalt_bufs[salt_pos].esalt_buf[ 9];
-  esalt_buf0[10] = esalt_bufs[salt_pos].esalt_buf[10];
-  esalt_buf0[11] = esalt_bufs[salt_pos].esalt_buf[11];
-  esalt_buf0[12] = esalt_bufs[salt_pos].esalt_buf[12];
-  esalt_buf0[13] = esalt_bufs[salt_pos].esalt_buf[13];
-  esalt_buf0[14] = esalt_bufs[salt_pos].esalt_buf[14];
-  esalt_buf0[15] = esalt_bufs[salt_pos].esalt_buf[15];
-  esalt_buf1[ 0] = esalt_bufs[salt_pos].esalt_buf[16];
-  esalt_buf1[ 1] = esalt_bufs[salt_pos].esalt_buf[17];
-  esalt_buf1[ 2] = esalt_bufs[salt_pos].esalt_buf[18];
-  esalt_buf1[ 3] = esalt_bufs[salt_pos].esalt_buf[19];
-  esalt_buf1[ 4] = esalt_bufs[salt_pos].esalt_buf[20];
-  esalt_buf1[ 5] = esalt_bufs[salt_pos].esalt_buf[21];
-  esalt_buf1[ 6] = esalt_bufs[salt_pos].esalt_buf[22];
-  esalt_buf1[ 7] = esalt_bufs[salt_pos].esalt_buf[23];
-  esalt_buf1[ 8] = esalt_bufs[salt_pos].esalt_buf[24];
-  esalt_buf1[ 9] = esalt_bufs[salt_pos].esalt_buf[25];
-  esalt_buf1[10] = esalt_bufs[salt_pos].esalt_buf[26];
-  esalt_buf1[11] = esalt_bufs[salt_pos].esalt_buf[27];
-  esalt_buf1[12] = esalt_bufs[salt_pos].esalt_buf[28];
-  esalt_buf1[13] = esalt_bufs[salt_pos].esalt_buf[29];
-  esalt_buf1[14] = esalt_bufs[salt_pos].esalt_buf[30];
-  esalt_buf1[15] = esalt_bufs[salt_pos].esalt_buf[31];
+  esalt_buf0[ 0] = esalt_bufs[digests_offset].esalt_buf[ 0];
+  esalt_buf0[ 1] = esalt_bufs[digests_offset].esalt_buf[ 1];
+  esalt_buf0[ 2] = esalt_bufs[digests_offset].esalt_buf[ 2];
+  esalt_buf0[ 3] = esalt_bufs[digests_offset].esalt_buf[ 3];
+  esalt_buf0[ 4] = esalt_bufs[digests_offset].esalt_buf[ 4];
+  esalt_buf0[ 5] = esalt_bufs[digests_offset].esalt_buf[ 5];
+  esalt_buf0[ 6] = esalt_bufs[digests_offset].esalt_buf[ 6];
+  esalt_buf0[ 7] = esalt_bufs[digests_offset].esalt_buf[ 7];
+  esalt_buf0[ 8] = esalt_bufs[digests_offset].esalt_buf[ 8];
+  esalt_buf0[ 9] = esalt_bufs[digests_offset].esalt_buf[ 9];
+  esalt_buf0[10] = esalt_bufs[digests_offset].esalt_buf[10];
+  esalt_buf0[11] = esalt_bufs[digests_offset].esalt_buf[11];
+  esalt_buf0[12] = esalt_bufs[digests_offset].esalt_buf[12];
+  esalt_buf0[13] = esalt_bufs[digests_offset].esalt_buf[13];
+  esalt_buf0[14] = esalt_bufs[digests_offset].esalt_buf[14];
+  esalt_buf0[15] = esalt_bufs[digests_offset].esalt_buf[15];
+  esalt_buf1[ 0] = esalt_bufs[digests_offset].esalt_buf[16];
+  esalt_buf1[ 1] = esalt_bufs[digests_offset].esalt_buf[17];
+  esalt_buf1[ 2] = esalt_bufs[digests_offset].esalt_buf[18];
+  esalt_buf1[ 3] = esalt_bufs[digests_offset].esalt_buf[19];
+  esalt_buf1[ 4] = esalt_bufs[digests_offset].esalt_buf[20];
+  esalt_buf1[ 5] = esalt_bufs[digests_offset].esalt_buf[21];
+  esalt_buf1[ 6] = esalt_bufs[digests_offset].esalt_buf[22];
+  esalt_buf1[ 7] = esalt_bufs[digests_offset].esalt_buf[23];
+  esalt_buf1[ 8] = esalt_bufs[digests_offset].esalt_buf[24];
+  esalt_buf1[ 9] = esalt_bufs[digests_offset].esalt_buf[25];
+  esalt_buf1[10] = esalt_bufs[digests_offset].esalt_buf[26];
+  esalt_buf1[11] = esalt_bufs[digests_offset].esalt_buf[27];
+  esalt_buf1[12] = esalt_bufs[digests_offset].esalt_buf[28];
+  esalt_buf1[13] = esalt_bufs[digests_offset].esalt_buf[29];
+  esalt_buf1[14] = esalt_bufs[digests_offset].esalt_buf[30];
+  esalt_buf1[15] = esalt_bufs[digests_offset].esalt_buf[31];
 
   const u32 digest_esalt_len = 32 + esalt_len;
 
@@ -1232,7 +1230,7 @@ static void m11400m_0_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
   }
 }
 
-static void m11400m_0_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
+void m11400m_0_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
 {
   /**
    * modifier
@@ -1245,43 +1243,43 @@ static void m11400m_0_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * salt
    */
 
-  const u32 salt_len = esalt_bufs[salt_pos].salt_len; // not a bug, we need to get it from the esalt
+  const u32 salt_len = esalt_bufs[digests_offset].salt_len; // not a bug, we need to get it from the esalt
 
   const u32 pw_salt_len = salt_len + pw_len;
 
   u32 salt_buf0[16];
   u32 salt_buf1[16];
 
-  salt_buf0[ 0] = esalt_bufs[salt_pos].salt_buf[ 0];
-  salt_buf0[ 1] = esalt_bufs[salt_pos].salt_buf[ 1];
-  salt_buf0[ 2] = esalt_bufs[salt_pos].salt_buf[ 2];
-  salt_buf0[ 3] = esalt_bufs[salt_pos].salt_buf[ 3];
-  salt_buf0[ 4] = esalt_bufs[salt_pos].salt_buf[ 4];
-  salt_buf0[ 5] = esalt_bufs[salt_pos].salt_buf[ 5];
-  salt_buf0[ 6] = esalt_bufs[salt_pos].salt_buf[ 6];
-  salt_buf0[ 7] = esalt_bufs[salt_pos].salt_buf[ 7];
-  salt_buf0[ 8] = esalt_bufs[salt_pos].salt_buf[ 8];
-  salt_buf0[ 9] = esalt_bufs[salt_pos].salt_buf[ 9];
-  salt_buf0[10] = esalt_bufs[salt_pos].salt_buf[10];
-  salt_buf0[11] = esalt_bufs[salt_pos].salt_buf[11];
-  salt_buf0[12] = esalt_bufs[salt_pos].salt_buf[12];
-  salt_buf0[13] = esalt_bufs[salt_pos].salt_buf[13];
-  salt_buf0[14] = esalt_bufs[salt_pos].salt_buf[14];
-  salt_buf0[15] = esalt_bufs[salt_pos].salt_buf[15];
-  salt_buf1[ 0] = esalt_bufs[salt_pos].salt_buf[16];
-  salt_buf1[ 1] = esalt_bufs[salt_pos].salt_buf[17];
-  salt_buf1[ 2] = esalt_bufs[salt_pos].salt_buf[18];
-  salt_buf1[ 3] = esalt_bufs[salt_pos].salt_buf[19];
-  salt_buf1[ 4] = esalt_bufs[salt_pos].salt_buf[20];
-  salt_buf1[ 5] = esalt_bufs[salt_pos].salt_buf[21];
-  salt_buf1[ 6] = esalt_bufs[salt_pos].salt_buf[22];
-  salt_buf1[ 7] = esalt_bufs[salt_pos].salt_buf[23];
-  salt_buf1[ 8] = esalt_bufs[salt_pos].salt_buf[24];
-  salt_buf1[ 9] = esalt_bufs[salt_pos].salt_buf[25];
-  salt_buf1[10] = esalt_bufs[salt_pos].salt_buf[26];
-  salt_buf1[11] = esalt_bufs[salt_pos].salt_buf[27];
-  salt_buf1[12] = esalt_bufs[salt_pos].salt_buf[28];
-  salt_buf1[13] = esalt_bufs[salt_pos].salt_buf[29];
+  salt_buf0[ 0] = esalt_bufs[digests_offset].salt_buf[ 0];
+  salt_buf0[ 1] = esalt_bufs[digests_offset].salt_buf[ 1];
+  salt_buf0[ 2] = esalt_bufs[digests_offset].salt_buf[ 2];
+  salt_buf0[ 3] = esalt_bufs[digests_offset].salt_buf[ 3];
+  salt_buf0[ 4] = esalt_bufs[digests_offset].salt_buf[ 4];
+  salt_buf0[ 5] = esalt_bufs[digests_offset].salt_buf[ 5];
+  salt_buf0[ 6] = esalt_bufs[digests_offset].salt_buf[ 6];
+  salt_buf0[ 7] = esalt_bufs[digests_offset].salt_buf[ 7];
+  salt_buf0[ 8] = esalt_bufs[digests_offset].salt_buf[ 8];
+  salt_buf0[ 9] = esalt_bufs[digests_offset].salt_buf[ 9];
+  salt_buf0[10] = esalt_bufs[digests_offset].salt_buf[10];
+  salt_buf0[11] = esalt_bufs[digests_offset].salt_buf[11];
+  salt_buf0[12] = esalt_bufs[digests_offset].salt_buf[12];
+  salt_buf0[13] = esalt_bufs[digests_offset].salt_buf[13];
+  salt_buf0[14] = esalt_bufs[digests_offset].salt_buf[14];
+  salt_buf0[15] = esalt_bufs[digests_offset].salt_buf[15];
+  salt_buf1[ 0] = esalt_bufs[digests_offset].salt_buf[16];
+  salt_buf1[ 1] = esalt_bufs[digests_offset].salt_buf[17];
+  salt_buf1[ 2] = esalt_bufs[digests_offset].salt_buf[18];
+  salt_buf1[ 3] = esalt_bufs[digests_offset].salt_buf[19];
+  salt_buf1[ 4] = esalt_bufs[digests_offset].salt_buf[20];
+  salt_buf1[ 5] = esalt_bufs[digests_offset].salt_buf[21];
+  salt_buf1[ 6] = esalt_bufs[digests_offset].salt_buf[22];
+  salt_buf1[ 7] = esalt_bufs[digests_offset].salt_buf[23];
+  salt_buf1[ 8] = esalt_bufs[digests_offset].salt_buf[24];
+  salt_buf1[ 9] = esalt_bufs[digests_offset].salt_buf[25];
+  salt_buf1[10] = esalt_bufs[digests_offset].salt_buf[26];
+  salt_buf1[11] = esalt_bufs[digests_offset].salt_buf[27];
+  salt_buf1[12] = esalt_bufs[digests_offset].salt_buf[28];
+  salt_buf1[13] = esalt_bufs[digests_offset].salt_buf[29];
   salt_buf1[14] = 0;
   salt_buf1[15] = 0;
 
@@ -1289,50 +1287,50 @@ static void m11400m_0_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * esalt
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
 
   u32 esalt_buf0[16];
   u32 esalt_buf1[16];
   u32 esalt_buf2[16];
 
-  esalt_buf0[ 0] = esalt_bufs[salt_pos].esalt_buf[ 0];
-  esalt_buf0[ 1] = esalt_bufs[salt_pos].esalt_buf[ 1];
-  esalt_buf0[ 2] = esalt_bufs[salt_pos].esalt_buf[ 2];
-  esalt_buf0[ 3] = esalt_bufs[salt_pos].esalt_buf[ 3];
-  esalt_buf0[ 4] = esalt_bufs[salt_pos].esalt_buf[ 4];
-  esalt_buf0[ 5] = esalt_bufs[salt_pos].esalt_buf[ 5];
-  esalt_buf0[ 6] = esalt_bufs[salt_pos].esalt_buf[ 6];
-  esalt_buf0[ 7] = esalt_bufs[salt_pos].esalt_buf[ 7];
-  esalt_buf0[ 8] = esalt_bufs[salt_pos].esalt_buf[ 8];
-  esalt_buf0[ 9] = esalt_bufs[salt_pos].esalt_buf[ 9];
-  esalt_buf0[10] = esalt_bufs[salt_pos].esalt_buf[10];
-  esalt_buf0[11] = esalt_bufs[salt_pos].esalt_buf[11];
-  esalt_buf0[12] = esalt_bufs[salt_pos].esalt_buf[12];
-  esalt_buf0[13] = esalt_bufs[salt_pos].esalt_buf[13];
-  esalt_buf0[14] = esalt_bufs[salt_pos].esalt_buf[14];
-  esalt_buf0[15] = esalt_bufs[salt_pos].esalt_buf[15];
-  esalt_buf1[ 0] = esalt_bufs[salt_pos].esalt_buf[16];
-  esalt_buf1[ 1] = esalt_bufs[salt_pos].esalt_buf[17];
-  esalt_buf1[ 2] = esalt_bufs[salt_pos].esalt_buf[18];
-  esalt_buf1[ 3] = esalt_bufs[salt_pos].esalt_buf[19];
-  esalt_buf1[ 4] = esalt_bufs[salt_pos].esalt_buf[20];
-  esalt_buf1[ 5] = esalt_bufs[salt_pos].esalt_buf[21];
-  esalt_buf1[ 6] = esalt_bufs[salt_pos].esalt_buf[22];
-  esalt_buf1[ 7] = esalt_bufs[salt_pos].esalt_buf[23];
-  esalt_buf1[ 8] = esalt_bufs[salt_pos].esalt_buf[24];
-  esalt_buf1[ 9] = esalt_bufs[salt_pos].esalt_buf[25];
-  esalt_buf1[10] = esalt_bufs[salt_pos].esalt_buf[26];
-  esalt_buf1[11] = esalt_bufs[salt_pos].esalt_buf[27];
-  esalt_buf1[12] = esalt_bufs[salt_pos].esalt_buf[28];
-  esalt_buf1[13] = esalt_bufs[salt_pos].esalt_buf[29];
-  esalt_buf1[14] = esalt_bufs[salt_pos].esalt_buf[30];
-  esalt_buf1[15] = esalt_bufs[salt_pos].esalt_buf[31];
-  esalt_buf2[ 0] = esalt_bufs[salt_pos].esalt_buf[32];
-  esalt_buf2[ 1] = esalt_bufs[salt_pos].esalt_buf[33];
-  esalt_buf2[ 2] = esalt_bufs[salt_pos].esalt_buf[34];
-  esalt_buf2[ 3] = esalt_bufs[salt_pos].esalt_buf[35];
-  esalt_buf2[ 4] = esalt_bufs[salt_pos].esalt_buf[36];
-  esalt_buf2[ 5] = esalt_bufs[salt_pos].esalt_buf[37];
+  esalt_buf0[ 0] = esalt_bufs[digests_offset].esalt_buf[ 0];
+  esalt_buf0[ 1] = esalt_bufs[digests_offset].esalt_buf[ 1];
+  esalt_buf0[ 2] = esalt_bufs[digests_offset].esalt_buf[ 2];
+  esalt_buf0[ 3] = esalt_bufs[digests_offset].esalt_buf[ 3];
+  esalt_buf0[ 4] = esalt_bufs[digests_offset].esalt_buf[ 4];
+  esalt_buf0[ 5] = esalt_bufs[digests_offset].esalt_buf[ 5];
+  esalt_buf0[ 6] = esalt_bufs[digests_offset].esalt_buf[ 6];
+  esalt_buf0[ 7] = esalt_bufs[digests_offset].esalt_buf[ 7];
+  esalt_buf0[ 8] = esalt_bufs[digests_offset].esalt_buf[ 8];
+  esalt_buf0[ 9] = esalt_bufs[digests_offset].esalt_buf[ 9];
+  esalt_buf0[10] = esalt_bufs[digests_offset].esalt_buf[10];
+  esalt_buf0[11] = esalt_bufs[digests_offset].esalt_buf[11];
+  esalt_buf0[12] = esalt_bufs[digests_offset].esalt_buf[12];
+  esalt_buf0[13] = esalt_bufs[digests_offset].esalt_buf[13];
+  esalt_buf0[14] = esalt_bufs[digests_offset].esalt_buf[14];
+  esalt_buf0[15] = esalt_bufs[digests_offset].esalt_buf[15];
+  esalt_buf1[ 0] = esalt_bufs[digests_offset].esalt_buf[16];
+  esalt_buf1[ 1] = esalt_bufs[digests_offset].esalt_buf[17];
+  esalt_buf1[ 2] = esalt_bufs[digests_offset].esalt_buf[18];
+  esalt_buf1[ 3] = esalt_bufs[digests_offset].esalt_buf[19];
+  esalt_buf1[ 4] = esalt_bufs[digests_offset].esalt_buf[20];
+  esalt_buf1[ 5] = esalt_bufs[digests_offset].esalt_buf[21];
+  esalt_buf1[ 6] = esalt_bufs[digests_offset].esalt_buf[22];
+  esalt_buf1[ 7] = esalt_bufs[digests_offset].esalt_buf[23];
+  esalt_buf1[ 8] = esalt_bufs[digests_offset].esalt_buf[24];
+  esalt_buf1[ 9] = esalt_bufs[digests_offset].esalt_buf[25];
+  esalt_buf1[10] = esalt_bufs[digests_offset].esalt_buf[26];
+  esalt_buf1[11] = esalt_bufs[digests_offset].esalt_buf[27];
+  esalt_buf1[12] = esalt_bufs[digests_offset].esalt_buf[28];
+  esalt_buf1[13] = esalt_bufs[digests_offset].esalt_buf[29];
+  esalt_buf1[14] = esalt_bufs[digests_offset].esalt_buf[30];
+  esalt_buf1[15] = esalt_bufs[digests_offset].esalt_buf[31];
+  esalt_buf2[ 0] = esalt_bufs[digests_offset].esalt_buf[32];
+  esalt_buf2[ 1] = esalt_bufs[digests_offset].esalt_buf[33];
+  esalt_buf2[ 2] = esalt_bufs[digests_offset].esalt_buf[34];
+  esalt_buf2[ 3] = esalt_bufs[digests_offset].esalt_buf[35];
+  esalt_buf2[ 4] = esalt_bufs[digests_offset].esalt_buf[36];
+  esalt_buf2[ 5] = esalt_bufs[digests_offset].esalt_buf[37];
   esalt_buf2[ 6] = 0;
   esalt_buf2[ 7] = 0;
   esalt_buf2[ 8] = 0;
@@ -1830,7 +1828,7 @@ static void m11400m_0_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
   }
 }
 
-static void m11400m_1_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
+void m11400m_1_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
 {
   /**
    * modifier
@@ -1843,43 +1841,43 @@ static void m11400m_1_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * salt
    */
 
-  const u32 salt_len = esalt_bufs[salt_pos].salt_len; // not a bug, we need to get it from the esalt
+  const u32 salt_len = esalt_bufs[digests_offset].salt_len; // not a bug, we need to get it from the esalt
 
   const u32 pw_salt_len = salt_len + pw_len;
 
   u32 salt_buf0[16];
   u32 salt_buf1[16];
 
-  salt_buf0[ 0] = esalt_bufs[salt_pos].salt_buf[ 0];
-  salt_buf0[ 1] = esalt_bufs[salt_pos].salt_buf[ 1];
-  salt_buf0[ 2] = esalt_bufs[salt_pos].salt_buf[ 2];
-  salt_buf0[ 3] = esalt_bufs[salt_pos].salt_buf[ 3];
-  salt_buf0[ 4] = esalt_bufs[salt_pos].salt_buf[ 4];
-  salt_buf0[ 5] = esalt_bufs[salt_pos].salt_buf[ 5];
-  salt_buf0[ 6] = esalt_bufs[salt_pos].salt_buf[ 6];
-  salt_buf0[ 7] = esalt_bufs[salt_pos].salt_buf[ 7];
-  salt_buf0[ 8] = esalt_bufs[salt_pos].salt_buf[ 8];
-  salt_buf0[ 9] = esalt_bufs[salt_pos].salt_buf[ 9];
-  salt_buf0[10] = esalt_bufs[salt_pos].salt_buf[10];
-  salt_buf0[11] = esalt_bufs[salt_pos].salt_buf[11];
-  salt_buf0[12] = esalt_bufs[salt_pos].salt_buf[12];
-  salt_buf0[13] = esalt_bufs[salt_pos].salt_buf[13];
-  salt_buf0[14] = esalt_bufs[salt_pos].salt_buf[14];
-  salt_buf0[15] = esalt_bufs[salt_pos].salt_buf[15];
-  salt_buf1[ 0] = esalt_bufs[salt_pos].salt_buf[16];
-  salt_buf1[ 1] = esalt_bufs[salt_pos].salt_buf[17];
-  salt_buf1[ 2] = esalt_bufs[salt_pos].salt_buf[18];
-  salt_buf1[ 3] = esalt_bufs[salt_pos].salt_buf[19];
-  salt_buf1[ 4] = esalt_bufs[salt_pos].salt_buf[20];
-  salt_buf1[ 5] = esalt_bufs[salt_pos].salt_buf[21];
-  salt_buf1[ 6] = esalt_bufs[salt_pos].salt_buf[22];
-  salt_buf1[ 7] = esalt_bufs[salt_pos].salt_buf[23];
-  salt_buf1[ 8] = esalt_bufs[salt_pos].salt_buf[24];
-  salt_buf1[ 9] = esalt_bufs[salt_pos].salt_buf[25];
-  salt_buf1[10] = esalt_bufs[salt_pos].salt_buf[26];
-  salt_buf1[11] = esalt_bufs[salt_pos].salt_buf[27];
-  salt_buf1[12] = esalt_bufs[salt_pos].salt_buf[28];
-  salt_buf1[13] = esalt_bufs[salt_pos].salt_buf[29];
+  salt_buf0[ 0] = esalt_bufs[digests_offset].salt_buf[ 0];
+  salt_buf0[ 1] = esalt_bufs[digests_offset].salt_buf[ 1];
+  salt_buf0[ 2] = esalt_bufs[digests_offset].salt_buf[ 2];
+  salt_buf0[ 3] = esalt_bufs[digests_offset].salt_buf[ 3];
+  salt_buf0[ 4] = esalt_bufs[digests_offset].salt_buf[ 4];
+  salt_buf0[ 5] = esalt_bufs[digests_offset].salt_buf[ 5];
+  salt_buf0[ 6] = esalt_bufs[digests_offset].salt_buf[ 6];
+  salt_buf0[ 7] = esalt_bufs[digests_offset].salt_buf[ 7];
+  salt_buf0[ 8] = esalt_bufs[digests_offset].salt_buf[ 8];
+  salt_buf0[ 9] = esalt_bufs[digests_offset].salt_buf[ 9];
+  salt_buf0[10] = esalt_bufs[digests_offset].salt_buf[10];
+  salt_buf0[11] = esalt_bufs[digests_offset].salt_buf[11];
+  salt_buf0[12] = esalt_bufs[digests_offset].salt_buf[12];
+  salt_buf0[13] = esalt_bufs[digests_offset].salt_buf[13];
+  salt_buf0[14] = esalt_bufs[digests_offset].salt_buf[14];
+  salt_buf0[15] = esalt_bufs[digests_offset].salt_buf[15];
+  salt_buf1[ 0] = esalt_bufs[digests_offset].salt_buf[16];
+  salt_buf1[ 1] = esalt_bufs[digests_offset].salt_buf[17];
+  salt_buf1[ 2] = esalt_bufs[digests_offset].salt_buf[18];
+  salt_buf1[ 3] = esalt_bufs[digests_offset].salt_buf[19];
+  salt_buf1[ 4] = esalt_bufs[digests_offset].salt_buf[20];
+  salt_buf1[ 5] = esalt_bufs[digests_offset].salt_buf[21];
+  salt_buf1[ 6] = esalt_bufs[digests_offset].salt_buf[22];
+  salt_buf1[ 7] = esalt_bufs[digests_offset].salt_buf[23];
+  salt_buf1[ 8] = esalt_bufs[digests_offset].salt_buf[24];
+  salt_buf1[ 9] = esalt_bufs[digests_offset].salt_buf[25];
+  salt_buf1[10] = esalt_bufs[digests_offset].salt_buf[26];
+  salt_buf1[11] = esalt_bufs[digests_offset].salt_buf[27];
+  salt_buf1[12] = esalt_bufs[digests_offset].salt_buf[28];
+  salt_buf1[13] = esalt_bufs[digests_offset].salt_buf[29];
   salt_buf1[14] = 0;
   salt_buf1[15] = 0;
 
@@ -1887,43 +1885,43 @@ static void m11400m_1_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * esalt
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
 
   u32 esalt_buf0[16];
   u32 esalt_buf1[16];
 
-  esalt_buf0[ 0] = esalt_bufs[salt_pos].esalt_buf[ 0];
-  esalt_buf0[ 1] = esalt_bufs[salt_pos].esalt_buf[ 1];
-  esalt_buf0[ 2] = esalt_bufs[salt_pos].esalt_buf[ 2];
-  esalt_buf0[ 3] = esalt_bufs[salt_pos].esalt_buf[ 3];
-  esalt_buf0[ 4] = esalt_bufs[salt_pos].esalt_buf[ 4];
-  esalt_buf0[ 5] = esalt_bufs[salt_pos].esalt_buf[ 5];
-  esalt_buf0[ 6] = esalt_bufs[salt_pos].esalt_buf[ 6];
-  esalt_buf0[ 7] = esalt_bufs[salt_pos].esalt_buf[ 7];
-  esalt_buf0[ 8] = esalt_bufs[salt_pos].esalt_buf[ 8];
-  esalt_buf0[ 9] = esalt_bufs[salt_pos].esalt_buf[ 9];
-  esalt_buf0[10] = esalt_bufs[salt_pos].esalt_buf[10];
-  esalt_buf0[11] = esalt_bufs[salt_pos].esalt_buf[11];
-  esalt_buf0[12] = esalt_bufs[salt_pos].esalt_buf[12];
-  esalt_buf0[13] = esalt_bufs[salt_pos].esalt_buf[13];
-  esalt_buf0[14] = esalt_bufs[salt_pos].esalt_buf[14];
-  esalt_buf0[15] = esalt_bufs[salt_pos].esalt_buf[15];
-  esalt_buf1[ 0] = esalt_bufs[salt_pos].esalt_buf[16];
-  esalt_buf1[ 1] = esalt_bufs[salt_pos].esalt_buf[17];
-  esalt_buf1[ 2] = esalt_bufs[salt_pos].esalt_buf[18];
-  esalt_buf1[ 3] = esalt_bufs[salt_pos].esalt_buf[19];
-  esalt_buf1[ 4] = esalt_bufs[salt_pos].esalt_buf[20];
-  esalt_buf1[ 5] = esalt_bufs[salt_pos].esalt_buf[21];
-  esalt_buf1[ 6] = esalt_bufs[salt_pos].esalt_buf[22];
-  esalt_buf1[ 7] = esalt_bufs[salt_pos].esalt_buf[23];
-  esalt_buf1[ 8] = esalt_bufs[salt_pos].esalt_buf[24];
-  esalt_buf1[ 9] = esalt_bufs[salt_pos].esalt_buf[25];
-  esalt_buf1[10] = esalt_bufs[salt_pos].esalt_buf[26];
-  esalt_buf1[11] = esalt_bufs[salt_pos].esalt_buf[27];
-  esalt_buf1[12] = esalt_bufs[salt_pos].esalt_buf[28];
-  esalt_buf1[13] = esalt_bufs[salt_pos].esalt_buf[29];
-  esalt_buf1[14] = esalt_bufs[salt_pos].esalt_buf[30];
-  esalt_buf1[15] = esalt_bufs[salt_pos].esalt_buf[31];
+  esalt_buf0[ 0] = esalt_bufs[digests_offset].esalt_buf[ 0];
+  esalt_buf0[ 1] = esalt_bufs[digests_offset].esalt_buf[ 1];
+  esalt_buf0[ 2] = esalt_bufs[digests_offset].esalt_buf[ 2];
+  esalt_buf0[ 3] = esalt_bufs[digests_offset].esalt_buf[ 3];
+  esalt_buf0[ 4] = esalt_bufs[digests_offset].esalt_buf[ 4];
+  esalt_buf0[ 5] = esalt_bufs[digests_offset].esalt_buf[ 5];
+  esalt_buf0[ 6] = esalt_bufs[digests_offset].esalt_buf[ 6];
+  esalt_buf0[ 7] = esalt_bufs[digests_offset].esalt_buf[ 7];
+  esalt_buf0[ 8] = esalt_bufs[digests_offset].esalt_buf[ 8];
+  esalt_buf0[ 9] = esalt_bufs[digests_offset].esalt_buf[ 9];
+  esalt_buf0[10] = esalt_bufs[digests_offset].esalt_buf[10];
+  esalt_buf0[11] = esalt_bufs[digests_offset].esalt_buf[11];
+  esalt_buf0[12] = esalt_bufs[digests_offset].esalt_buf[12];
+  esalt_buf0[13] = esalt_bufs[digests_offset].esalt_buf[13];
+  esalt_buf0[14] = esalt_bufs[digests_offset].esalt_buf[14];
+  esalt_buf0[15] = esalt_bufs[digests_offset].esalt_buf[15];
+  esalt_buf1[ 0] = esalt_bufs[digests_offset].esalt_buf[16];
+  esalt_buf1[ 1] = esalt_bufs[digests_offset].esalt_buf[17];
+  esalt_buf1[ 2] = esalt_bufs[digests_offset].esalt_buf[18];
+  esalt_buf1[ 3] = esalt_bufs[digests_offset].esalt_buf[19];
+  esalt_buf1[ 4] = esalt_bufs[digests_offset].esalt_buf[20];
+  esalt_buf1[ 5] = esalt_bufs[digests_offset].esalt_buf[21];
+  esalt_buf1[ 6] = esalt_bufs[digests_offset].esalt_buf[22];
+  esalt_buf1[ 7] = esalt_bufs[digests_offset].esalt_buf[23];
+  esalt_buf1[ 8] = esalt_bufs[digests_offset].esalt_buf[24];
+  esalt_buf1[ 9] = esalt_bufs[digests_offset].esalt_buf[25];
+  esalt_buf1[10] = esalt_bufs[digests_offset].esalt_buf[26];
+  esalt_buf1[11] = esalt_bufs[digests_offset].esalt_buf[27];
+  esalt_buf1[12] = esalt_bufs[digests_offset].esalt_buf[28];
+  esalt_buf1[13] = esalt_bufs[digests_offset].esalt_buf[29];
+  esalt_buf1[14] = esalt_bufs[digests_offset].esalt_buf[30];
+  esalt_buf1[15] = esalt_bufs[digests_offset].esalt_buf[31];
 
   const u32 digest_esalt_len = 32 + esalt_len;
 
@@ -2409,7 +2407,7 @@ static void m11400m_1_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
   }
 }
 
-static void m11400m_1_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
+void m11400m_1_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
 {
   /**
    * modifier
@@ -2422,43 +2420,43 @@ static void m11400m_1_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * salt
    */
 
-  const u32 salt_len = esalt_bufs[salt_pos].salt_len; // not a bug, we need to get it from the esalt
+  const u32 salt_len = esalt_bufs[digests_offset].salt_len; // not a bug, we need to get it from the esalt
 
   const u32 pw_salt_len = salt_len + pw_len;
 
   u32 salt_buf0[16];
   u32 salt_buf1[16];
 
-  salt_buf0[ 0] = esalt_bufs[salt_pos].salt_buf[ 0];
-  salt_buf0[ 1] = esalt_bufs[salt_pos].salt_buf[ 1];
-  salt_buf0[ 2] = esalt_bufs[salt_pos].salt_buf[ 2];
-  salt_buf0[ 3] = esalt_bufs[salt_pos].salt_buf[ 3];
-  salt_buf0[ 4] = esalt_bufs[salt_pos].salt_buf[ 4];
-  salt_buf0[ 5] = esalt_bufs[salt_pos].salt_buf[ 5];
-  salt_buf0[ 6] = esalt_bufs[salt_pos].salt_buf[ 6];
-  salt_buf0[ 7] = esalt_bufs[salt_pos].salt_buf[ 7];
-  salt_buf0[ 8] = esalt_bufs[salt_pos].salt_buf[ 8];
-  salt_buf0[ 9] = esalt_bufs[salt_pos].salt_buf[ 9];
-  salt_buf0[10] = esalt_bufs[salt_pos].salt_buf[10];
-  salt_buf0[11] = esalt_bufs[salt_pos].salt_buf[11];
-  salt_buf0[12] = esalt_bufs[salt_pos].salt_buf[12];
-  salt_buf0[13] = esalt_bufs[salt_pos].salt_buf[13];
-  salt_buf0[14] = esalt_bufs[salt_pos].salt_buf[14];
-  salt_buf0[15] = esalt_bufs[salt_pos].salt_buf[15];
-  salt_buf1[ 0] = esalt_bufs[salt_pos].salt_buf[16];
-  salt_buf1[ 1] = esalt_bufs[salt_pos].salt_buf[17];
-  salt_buf1[ 2] = esalt_bufs[salt_pos].salt_buf[18];
-  salt_buf1[ 3] = esalt_bufs[salt_pos].salt_buf[19];
-  salt_buf1[ 4] = esalt_bufs[salt_pos].salt_buf[20];
-  salt_buf1[ 5] = esalt_bufs[salt_pos].salt_buf[21];
-  salt_buf1[ 6] = esalt_bufs[salt_pos].salt_buf[22];
-  salt_buf1[ 7] = esalt_bufs[salt_pos].salt_buf[23];
-  salt_buf1[ 8] = esalt_bufs[salt_pos].salt_buf[24];
-  salt_buf1[ 9] = esalt_bufs[salt_pos].salt_buf[25];
-  salt_buf1[10] = esalt_bufs[salt_pos].salt_buf[26];
-  salt_buf1[11] = esalt_bufs[salt_pos].salt_buf[27];
-  salt_buf1[12] = esalt_bufs[salt_pos].salt_buf[28];
-  salt_buf1[13] = esalt_bufs[salt_pos].salt_buf[29];
+  salt_buf0[ 0] = esalt_bufs[digests_offset].salt_buf[ 0];
+  salt_buf0[ 1] = esalt_bufs[digests_offset].salt_buf[ 1];
+  salt_buf0[ 2] = esalt_bufs[digests_offset].salt_buf[ 2];
+  salt_buf0[ 3] = esalt_bufs[digests_offset].salt_buf[ 3];
+  salt_buf0[ 4] = esalt_bufs[digests_offset].salt_buf[ 4];
+  salt_buf0[ 5] = esalt_bufs[digests_offset].salt_buf[ 5];
+  salt_buf0[ 6] = esalt_bufs[digests_offset].salt_buf[ 6];
+  salt_buf0[ 7] = esalt_bufs[digests_offset].salt_buf[ 7];
+  salt_buf0[ 8] = esalt_bufs[digests_offset].salt_buf[ 8];
+  salt_buf0[ 9] = esalt_bufs[digests_offset].salt_buf[ 9];
+  salt_buf0[10] = esalt_bufs[digests_offset].salt_buf[10];
+  salt_buf0[11] = esalt_bufs[digests_offset].salt_buf[11];
+  salt_buf0[12] = esalt_bufs[digests_offset].salt_buf[12];
+  salt_buf0[13] = esalt_bufs[digests_offset].salt_buf[13];
+  salt_buf0[14] = esalt_bufs[digests_offset].salt_buf[14];
+  salt_buf0[15] = esalt_bufs[digests_offset].salt_buf[15];
+  salt_buf1[ 0] = esalt_bufs[digests_offset].salt_buf[16];
+  salt_buf1[ 1] = esalt_bufs[digests_offset].salt_buf[17];
+  salt_buf1[ 2] = esalt_bufs[digests_offset].salt_buf[18];
+  salt_buf1[ 3] = esalt_bufs[digests_offset].salt_buf[19];
+  salt_buf1[ 4] = esalt_bufs[digests_offset].salt_buf[20];
+  salt_buf1[ 5] = esalt_bufs[digests_offset].salt_buf[21];
+  salt_buf1[ 6] = esalt_bufs[digests_offset].salt_buf[22];
+  salt_buf1[ 7] = esalt_bufs[digests_offset].salt_buf[23];
+  salt_buf1[ 8] = esalt_bufs[digests_offset].salt_buf[24];
+  salt_buf1[ 9] = esalt_bufs[digests_offset].salt_buf[25];
+  salt_buf1[10] = esalt_bufs[digests_offset].salt_buf[26];
+  salt_buf1[11] = esalt_bufs[digests_offset].salt_buf[27];
+  salt_buf1[12] = esalt_bufs[digests_offset].salt_buf[28];
+  salt_buf1[13] = esalt_bufs[digests_offset].salt_buf[29];
   salt_buf1[14] = 0;
   salt_buf1[15] = 0;
 
@@ -2466,50 +2464,50 @@ static void m11400m_1_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * esalt
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
 
   u32 esalt_buf0[16];
   u32 esalt_buf1[16];
   u32 esalt_buf2[16];
 
-  esalt_buf0[ 0] = esalt_bufs[salt_pos].esalt_buf[ 0];
-  esalt_buf0[ 1] = esalt_bufs[salt_pos].esalt_buf[ 1];
-  esalt_buf0[ 2] = esalt_bufs[salt_pos].esalt_buf[ 2];
-  esalt_buf0[ 3] = esalt_bufs[salt_pos].esalt_buf[ 3];
-  esalt_buf0[ 4] = esalt_bufs[salt_pos].esalt_buf[ 4];
-  esalt_buf0[ 5] = esalt_bufs[salt_pos].esalt_buf[ 5];
-  esalt_buf0[ 6] = esalt_bufs[salt_pos].esalt_buf[ 6];
-  esalt_buf0[ 7] = esalt_bufs[salt_pos].esalt_buf[ 7];
-  esalt_buf0[ 8] = esalt_bufs[salt_pos].esalt_buf[ 8];
-  esalt_buf0[ 9] = esalt_bufs[salt_pos].esalt_buf[ 9];
-  esalt_buf0[10] = esalt_bufs[salt_pos].esalt_buf[10];
-  esalt_buf0[11] = esalt_bufs[salt_pos].esalt_buf[11];
-  esalt_buf0[12] = esalt_bufs[salt_pos].esalt_buf[12];
-  esalt_buf0[13] = esalt_bufs[salt_pos].esalt_buf[13];
-  esalt_buf0[14] = esalt_bufs[salt_pos].esalt_buf[14];
-  esalt_buf0[15] = esalt_bufs[salt_pos].esalt_buf[15];
-  esalt_buf1[ 0] = esalt_bufs[salt_pos].esalt_buf[16];
-  esalt_buf1[ 1] = esalt_bufs[salt_pos].esalt_buf[17];
-  esalt_buf1[ 2] = esalt_bufs[salt_pos].esalt_buf[18];
-  esalt_buf1[ 3] = esalt_bufs[salt_pos].esalt_buf[19];
-  esalt_buf1[ 4] = esalt_bufs[salt_pos].esalt_buf[20];
-  esalt_buf1[ 5] = esalt_bufs[salt_pos].esalt_buf[21];
-  esalt_buf1[ 6] = esalt_bufs[salt_pos].esalt_buf[22];
-  esalt_buf1[ 7] = esalt_bufs[salt_pos].esalt_buf[23];
-  esalt_buf1[ 8] = esalt_bufs[salt_pos].esalt_buf[24];
-  esalt_buf1[ 9] = esalt_bufs[salt_pos].esalt_buf[25];
-  esalt_buf1[10] = esalt_bufs[salt_pos].esalt_buf[26];
-  esalt_buf1[11] = esalt_bufs[salt_pos].esalt_buf[27];
-  esalt_buf1[12] = esalt_bufs[salt_pos].esalt_buf[28];
-  esalt_buf1[13] = esalt_bufs[salt_pos].esalt_buf[29];
-  esalt_buf1[14] = esalt_bufs[salt_pos].esalt_buf[30];
-  esalt_buf1[15] = esalt_bufs[salt_pos].esalt_buf[31];
-  esalt_buf2[ 0] = esalt_bufs[salt_pos].esalt_buf[32];
-  esalt_buf2[ 1] = esalt_bufs[salt_pos].esalt_buf[33];
-  esalt_buf2[ 2] = esalt_bufs[salt_pos].esalt_buf[34];
-  esalt_buf2[ 3] = esalt_bufs[salt_pos].esalt_buf[35];
-  esalt_buf2[ 4] = esalt_bufs[salt_pos].esalt_buf[36];
-  esalt_buf2[ 5] = esalt_bufs[salt_pos].esalt_buf[37];
+  esalt_buf0[ 0] = esalt_bufs[digests_offset].esalt_buf[ 0];
+  esalt_buf0[ 1] = esalt_bufs[digests_offset].esalt_buf[ 1];
+  esalt_buf0[ 2] = esalt_bufs[digests_offset].esalt_buf[ 2];
+  esalt_buf0[ 3] = esalt_bufs[digests_offset].esalt_buf[ 3];
+  esalt_buf0[ 4] = esalt_bufs[digests_offset].esalt_buf[ 4];
+  esalt_buf0[ 5] = esalt_bufs[digests_offset].esalt_buf[ 5];
+  esalt_buf0[ 6] = esalt_bufs[digests_offset].esalt_buf[ 6];
+  esalt_buf0[ 7] = esalt_bufs[digests_offset].esalt_buf[ 7];
+  esalt_buf0[ 8] = esalt_bufs[digests_offset].esalt_buf[ 8];
+  esalt_buf0[ 9] = esalt_bufs[digests_offset].esalt_buf[ 9];
+  esalt_buf0[10] = esalt_bufs[digests_offset].esalt_buf[10];
+  esalt_buf0[11] = esalt_bufs[digests_offset].esalt_buf[11];
+  esalt_buf0[12] = esalt_bufs[digests_offset].esalt_buf[12];
+  esalt_buf0[13] = esalt_bufs[digests_offset].esalt_buf[13];
+  esalt_buf0[14] = esalt_bufs[digests_offset].esalt_buf[14];
+  esalt_buf0[15] = esalt_bufs[digests_offset].esalt_buf[15];
+  esalt_buf1[ 0] = esalt_bufs[digests_offset].esalt_buf[16];
+  esalt_buf1[ 1] = esalt_bufs[digests_offset].esalt_buf[17];
+  esalt_buf1[ 2] = esalt_bufs[digests_offset].esalt_buf[18];
+  esalt_buf1[ 3] = esalt_bufs[digests_offset].esalt_buf[19];
+  esalt_buf1[ 4] = esalt_bufs[digests_offset].esalt_buf[20];
+  esalt_buf1[ 5] = esalt_bufs[digests_offset].esalt_buf[21];
+  esalt_buf1[ 6] = esalt_bufs[digests_offset].esalt_buf[22];
+  esalt_buf1[ 7] = esalt_bufs[digests_offset].esalt_buf[23];
+  esalt_buf1[ 8] = esalt_bufs[digests_offset].esalt_buf[24];
+  esalt_buf1[ 9] = esalt_bufs[digests_offset].esalt_buf[25];
+  esalt_buf1[10] = esalt_bufs[digests_offset].esalt_buf[26];
+  esalt_buf1[11] = esalt_bufs[digests_offset].esalt_buf[27];
+  esalt_buf1[12] = esalt_bufs[digests_offset].esalt_buf[28];
+  esalt_buf1[13] = esalt_bufs[digests_offset].esalt_buf[29];
+  esalt_buf1[14] = esalt_bufs[digests_offset].esalt_buf[30];
+  esalt_buf1[15] = esalt_bufs[digests_offset].esalt_buf[31];
+  esalt_buf2[ 0] = esalt_bufs[digests_offset].esalt_buf[32];
+  esalt_buf2[ 1] = esalt_bufs[digests_offset].esalt_buf[33];
+  esalt_buf2[ 2] = esalt_bufs[digests_offset].esalt_buf[34];
+  esalt_buf2[ 3] = esalt_bufs[digests_offset].esalt_buf[35];
+  esalt_buf2[ 4] = esalt_bufs[digests_offset].esalt_buf[36];
+  esalt_buf2[ 5] = esalt_bufs[digests_offset].esalt_buf[37];
   esalt_buf2[ 6] = 0;
   esalt_buf2[ 7] = 0;
   esalt_buf2[ 8] = 0;
@@ -3102,7 +3100,7 @@ static void m11400m_1_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
   }
 }
 
-static void m11400s_0_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
+void m11400s_0_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
 {
   /**
    * modifier
@@ -3127,43 +3125,43 @@ static void m11400s_0_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * salt
    */
 
-  const u32 salt_len = esalt_bufs[salt_pos].salt_len; // not a bug, we need to get it from the esalt
+  const u32 salt_len = esalt_bufs[digests_offset].salt_len; // not a bug, we need to get it from the esalt
 
   const u32 pw_salt_len = salt_len + pw_len;
 
   u32 salt_buf0[16];
   u32 salt_buf1[16];
 
-  salt_buf0[ 0] = esalt_bufs[salt_pos].salt_buf[ 0];
-  salt_buf0[ 1] = esalt_bufs[salt_pos].salt_buf[ 1];
-  salt_buf0[ 2] = esalt_bufs[salt_pos].salt_buf[ 2];
-  salt_buf0[ 3] = esalt_bufs[salt_pos].salt_buf[ 3];
-  salt_buf0[ 4] = esalt_bufs[salt_pos].salt_buf[ 4];
-  salt_buf0[ 5] = esalt_bufs[salt_pos].salt_buf[ 5];
-  salt_buf0[ 6] = esalt_bufs[salt_pos].salt_buf[ 6];
-  salt_buf0[ 7] = esalt_bufs[salt_pos].salt_buf[ 7];
-  salt_buf0[ 8] = esalt_bufs[salt_pos].salt_buf[ 8];
-  salt_buf0[ 9] = esalt_bufs[salt_pos].salt_buf[ 9];
-  salt_buf0[10] = esalt_bufs[salt_pos].salt_buf[10];
-  salt_buf0[11] = esalt_bufs[salt_pos].salt_buf[11];
-  salt_buf0[12] = esalt_bufs[salt_pos].salt_buf[12];
-  salt_buf0[13] = esalt_bufs[salt_pos].salt_buf[13];
-  salt_buf0[14] = esalt_bufs[salt_pos].salt_buf[14];
-  salt_buf0[15] = esalt_bufs[salt_pos].salt_buf[15];
-  salt_buf1[ 0] = esalt_bufs[salt_pos].salt_buf[16];
-  salt_buf1[ 1] = esalt_bufs[salt_pos].salt_buf[17];
-  salt_buf1[ 2] = esalt_bufs[salt_pos].salt_buf[18];
-  salt_buf1[ 3] = esalt_bufs[salt_pos].salt_buf[19];
-  salt_buf1[ 4] = esalt_bufs[salt_pos].salt_buf[20];
-  salt_buf1[ 5] = esalt_bufs[salt_pos].salt_buf[21];
-  salt_buf1[ 6] = esalt_bufs[salt_pos].salt_buf[22];
-  salt_buf1[ 7] = esalt_bufs[salt_pos].salt_buf[23];
-  salt_buf1[ 8] = esalt_bufs[salt_pos].salt_buf[24];
-  salt_buf1[ 9] = esalt_bufs[salt_pos].salt_buf[25];
-  salt_buf1[10] = esalt_bufs[salt_pos].salt_buf[26];
-  salt_buf1[11] = esalt_bufs[salt_pos].salt_buf[27];
-  salt_buf1[12] = esalt_bufs[salt_pos].salt_buf[28];
-  salt_buf1[13] = esalt_bufs[salt_pos].salt_buf[29];
+  salt_buf0[ 0] = esalt_bufs[digests_offset].salt_buf[ 0];
+  salt_buf0[ 1] = esalt_bufs[digests_offset].salt_buf[ 1];
+  salt_buf0[ 2] = esalt_bufs[digests_offset].salt_buf[ 2];
+  salt_buf0[ 3] = esalt_bufs[digests_offset].salt_buf[ 3];
+  salt_buf0[ 4] = esalt_bufs[digests_offset].salt_buf[ 4];
+  salt_buf0[ 5] = esalt_bufs[digests_offset].salt_buf[ 5];
+  salt_buf0[ 6] = esalt_bufs[digests_offset].salt_buf[ 6];
+  salt_buf0[ 7] = esalt_bufs[digests_offset].salt_buf[ 7];
+  salt_buf0[ 8] = esalt_bufs[digests_offset].salt_buf[ 8];
+  salt_buf0[ 9] = esalt_bufs[digests_offset].salt_buf[ 9];
+  salt_buf0[10] = esalt_bufs[digests_offset].salt_buf[10];
+  salt_buf0[11] = esalt_bufs[digests_offset].salt_buf[11];
+  salt_buf0[12] = esalt_bufs[digests_offset].salt_buf[12];
+  salt_buf0[13] = esalt_bufs[digests_offset].salt_buf[13];
+  salt_buf0[14] = esalt_bufs[digests_offset].salt_buf[14];
+  salt_buf0[15] = esalt_bufs[digests_offset].salt_buf[15];
+  salt_buf1[ 0] = esalt_bufs[digests_offset].salt_buf[16];
+  salt_buf1[ 1] = esalt_bufs[digests_offset].salt_buf[17];
+  salt_buf1[ 2] = esalt_bufs[digests_offset].salt_buf[18];
+  salt_buf1[ 3] = esalt_bufs[digests_offset].salt_buf[19];
+  salt_buf1[ 4] = esalt_bufs[digests_offset].salt_buf[20];
+  salt_buf1[ 5] = esalt_bufs[digests_offset].salt_buf[21];
+  salt_buf1[ 6] = esalt_bufs[digests_offset].salt_buf[22];
+  salt_buf1[ 7] = esalt_bufs[digests_offset].salt_buf[23];
+  salt_buf1[ 8] = esalt_bufs[digests_offset].salt_buf[24];
+  salt_buf1[ 9] = esalt_bufs[digests_offset].salt_buf[25];
+  salt_buf1[10] = esalt_bufs[digests_offset].salt_buf[26];
+  salt_buf1[11] = esalt_bufs[digests_offset].salt_buf[27];
+  salt_buf1[12] = esalt_bufs[digests_offset].salt_buf[28];
+  salt_buf1[13] = esalt_bufs[digests_offset].salt_buf[29];
   salt_buf1[14] = 0;
   salt_buf1[15] = 0;
 
@@ -3171,43 +3169,43 @@ static void m11400s_0_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * esalt
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
 
   u32 esalt_buf0[16];
   u32 esalt_buf1[16];
 
-  esalt_buf0[ 0] = esalt_bufs[salt_pos].esalt_buf[ 0];
-  esalt_buf0[ 1] = esalt_bufs[salt_pos].esalt_buf[ 1];
-  esalt_buf0[ 2] = esalt_bufs[salt_pos].esalt_buf[ 2];
-  esalt_buf0[ 3] = esalt_bufs[salt_pos].esalt_buf[ 3];
-  esalt_buf0[ 4] = esalt_bufs[salt_pos].esalt_buf[ 4];
-  esalt_buf0[ 5] = esalt_bufs[salt_pos].esalt_buf[ 5];
-  esalt_buf0[ 6] = esalt_bufs[salt_pos].esalt_buf[ 6];
-  esalt_buf0[ 7] = esalt_bufs[salt_pos].esalt_buf[ 7];
-  esalt_buf0[ 8] = esalt_bufs[salt_pos].esalt_buf[ 8];
-  esalt_buf0[ 9] = esalt_bufs[salt_pos].esalt_buf[ 9];
-  esalt_buf0[10] = esalt_bufs[salt_pos].esalt_buf[10];
-  esalt_buf0[11] = esalt_bufs[salt_pos].esalt_buf[11];
-  esalt_buf0[12] = esalt_bufs[salt_pos].esalt_buf[12];
-  esalt_buf0[13] = esalt_bufs[salt_pos].esalt_buf[13];
-  esalt_buf0[14] = esalt_bufs[salt_pos].esalt_buf[14];
-  esalt_buf0[15] = esalt_bufs[salt_pos].esalt_buf[15];
-  esalt_buf1[ 0] = esalt_bufs[salt_pos].esalt_buf[16];
-  esalt_buf1[ 1] = esalt_bufs[salt_pos].esalt_buf[17];
-  esalt_buf1[ 2] = esalt_bufs[salt_pos].esalt_buf[18];
-  esalt_buf1[ 3] = esalt_bufs[salt_pos].esalt_buf[19];
-  esalt_buf1[ 4] = esalt_bufs[salt_pos].esalt_buf[20];
-  esalt_buf1[ 5] = esalt_bufs[salt_pos].esalt_buf[21];
-  esalt_buf1[ 6] = esalt_bufs[salt_pos].esalt_buf[22];
-  esalt_buf1[ 7] = esalt_bufs[salt_pos].esalt_buf[23];
-  esalt_buf1[ 8] = esalt_bufs[salt_pos].esalt_buf[24];
-  esalt_buf1[ 9] = esalt_bufs[salt_pos].esalt_buf[25];
-  esalt_buf1[10] = esalt_bufs[salt_pos].esalt_buf[26];
-  esalt_buf1[11] = esalt_bufs[salt_pos].esalt_buf[27];
-  esalt_buf1[12] = esalt_bufs[salt_pos].esalt_buf[28];
-  esalt_buf1[13] = esalt_bufs[salt_pos].esalt_buf[29];
-  esalt_buf1[14] = esalt_bufs[salt_pos].esalt_buf[30];
-  esalt_buf1[15] = esalt_bufs[salt_pos].esalt_buf[31];
+  esalt_buf0[ 0] = esalt_bufs[digests_offset].esalt_buf[ 0];
+  esalt_buf0[ 1] = esalt_bufs[digests_offset].esalt_buf[ 1];
+  esalt_buf0[ 2] = esalt_bufs[digests_offset].esalt_buf[ 2];
+  esalt_buf0[ 3] = esalt_bufs[digests_offset].esalt_buf[ 3];
+  esalt_buf0[ 4] = esalt_bufs[digests_offset].esalt_buf[ 4];
+  esalt_buf0[ 5] = esalt_bufs[digests_offset].esalt_buf[ 5];
+  esalt_buf0[ 6] = esalt_bufs[digests_offset].esalt_buf[ 6];
+  esalt_buf0[ 7] = esalt_bufs[digests_offset].esalt_buf[ 7];
+  esalt_buf0[ 8] = esalt_bufs[digests_offset].esalt_buf[ 8];
+  esalt_buf0[ 9] = esalt_bufs[digests_offset].esalt_buf[ 9];
+  esalt_buf0[10] = esalt_bufs[digests_offset].esalt_buf[10];
+  esalt_buf0[11] = esalt_bufs[digests_offset].esalt_buf[11];
+  esalt_buf0[12] = esalt_bufs[digests_offset].esalt_buf[12];
+  esalt_buf0[13] = esalt_bufs[digests_offset].esalt_buf[13];
+  esalt_buf0[14] = esalt_bufs[digests_offset].esalt_buf[14];
+  esalt_buf0[15] = esalt_bufs[digests_offset].esalt_buf[15];
+  esalt_buf1[ 0] = esalt_bufs[digests_offset].esalt_buf[16];
+  esalt_buf1[ 1] = esalt_bufs[digests_offset].esalt_buf[17];
+  esalt_buf1[ 2] = esalt_bufs[digests_offset].esalt_buf[18];
+  esalt_buf1[ 3] = esalt_bufs[digests_offset].esalt_buf[19];
+  esalt_buf1[ 4] = esalt_bufs[digests_offset].esalt_buf[20];
+  esalt_buf1[ 5] = esalt_bufs[digests_offset].esalt_buf[21];
+  esalt_buf1[ 6] = esalt_bufs[digests_offset].esalt_buf[22];
+  esalt_buf1[ 7] = esalt_bufs[digests_offset].esalt_buf[23];
+  esalt_buf1[ 8] = esalt_bufs[digests_offset].esalt_buf[24];
+  esalt_buf1[ 9] = esalt_bufs[digests_offset].esalt_buf[25];
+  esalt_buf1[10] = esalt_bufs[digests_offset].esalt_buf[26];
+  esalt_buf1[11] = esalt_bufs[digests_offset].esalt_buf[27];
+  esalt_buf1[12] = esalt_bufs[digests_offset].esalt_buf[28];
+  esalt_buf1[13] = esalt_bufs[digests_offset].esalt_buf[29];
+  esalt_buf1[14] = esalt_bufs[digests_offset].esalt_buf[30];
+  esalt_buf1[15] = esalt_bufs[digests_offset].esalt_buf[31];
 
   const u32 digest_esalt_len = 32 + esalt_len;
 
@@ -3598,7 +3596,7 @@ static void m11400s_0_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
   }
 }
 
-static void m11400s_0_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
+void m11400s_0_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
 {
   /**
    * modifier
@@ -3623,43 +3621,43 @@ static void m11400s_0_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * salt
    */
 
-  const u32 salt_len = esalt_bufs[salt_pos].salt_len; // not a bug, we need to get it from the esalt
+  const u32 salt_len = esalt_bufs[digests_offset].salt_len; // not a bug, we need to get it from the esalt
 
   const u32 pw_salt_len = salt_len + pw_len;
 
   u32 salt_buf0[16];
   u32 salt_buf1[16];
 
-  salt_buf0[ 0] = esalt_bufs[salt_pos].salt_buf[ 0];
-  salt_buf0[ 1] = esalt_bufs[salt_pos].salt_buf[ 1];
-  salt_buf0[ 2] = esalt_bufs[salt_pos].salt_buf[ 2];
-  salt_buf0[ 3] = esalt_bufs[salt_pos].salt_buf[ 3];
-  salt_buf0[ 4] = esalt_bufs[salt_pos].salt_buf[ 4];
-  salt_buf0[ 5] = esalt_bufs[salt_pos].salt_buf[ 5];
-  salt_buf0[ 6] = esalt_bufs[salt_pos].salt_buf[ 6];
-  salt_buf0[ 7] = esalt_bufs[salt_pos].salt_buf[ 7];
-  salt_buf0[ 8] = esalt_bufs[salt_pos].salt_buf[ 8];
-  salt_buf0[ 9] = esalt_bufs[salt_pos].salt_buf[ 9];
-  salt_buf0[10] = esalt_bufs[salt_pos].salt_buf[10];
-  salt_buf0[11] = esalt_bufs[salt_pos].salt_buf[11];
-  salt_buf0[12] = esalt_bufs[salt_pos].salt_buf[12];
-  salt_buf0[13] = esalt_bufs[salt_pos].salt_buf[13];
-  salt_buf0[14] = esalt_bufs[salt_pos].salt_buf[14];
-  salt_buf0[15] = esalt_bufs[salt_pos].salt_buf[15];
-  salt_buf1[ 0] = esalt_bufs[salt_pos].salt_buf[16];
-  salt_buf1[ 1] = esalt_bufs[salt_pos].salt_buf[17];
-  salt_buf1[ 2] = esalt_bufs[salt_pos].salt_buf[18];
-  salt_buf1[ 3] = esalt_bufs[salt_pos].salt_buf[19];
-  salt_buf1[ 4] = esalt_bufs[salt_pos].salt_buf[20];
-  salt_buf1[ 5] = esalt_bufs[salt_pos].salt_buf[21];
-  salt_buf1[ 6] = esalt_bufs[salt_pos].salt_buf[22];
-  salt_buf1[ 7] = esalt_bufs[salt_pos].salt_buf[23];
-  salt_buf1[ 8] = esalt_bufs[salt_pos].salt_buf[24];
-  salt_buf1[ 9] = esalt_bufs[salt_pos].salt_buf[25];
-  salt_buf1[10] = esalt_bufs[salt_pos].salt_buf[26];
-  salt_buf1[11] = esalt_bufs[salt_pos].salt_buf[27];
-  salt_buf1[12] = esalt_bufs[salt_pos].salt_buf[28];
-  salt_buf1[13] = esalt_bufs[salt_pos].salt_buf[29];
+  salt_buf0[ 0] = esalt_bufs[digests_offset].salt_buf[ 0];
+  salt_buf0[ 1] = esalt_bufs[digests_offset].salt_buf[ 1];
+  salt_buf0[ 2] = esalt_bufs[digests_offset].salt_buf[ 2];
+  salt_buf0[ 3] = esalt_bufs[digests_offset].salt_buf[ 3];
+  salt_buf0[ 4] = esalt_bufs[digests_offset].salt_buf[ 4];
+  salt_buf0[ 5] = esalt_bufs[digests_offset].salt_buf[ 5];
+  salt_buf0[ 6] = esalt_bufs[digests_offset].salt_buf[ 6];
+  salt_buf0[ 7] = esalt_bufs[digests_offset].salt_buf[ 7];
+  salt_buf0[ 8] = esalt_bufs[digests_offset].salt_buf[ 8];
+  salt_buf0[ 9] = esalt_bufs[digests_offset].salt_buf[ 9];
+  salt_buf0[10] = esalt_bufs[digests_offset].salt_buf[10];
+  salt_buf0[11] = esalt_bufs[digests_offset].salt_buf[11];
+  salt_buf0[12] = esalt_bufs[digests_offset].salt_buf[12];
+  salt_buf0[13] = esalt_bufs[digests_offset].salt_buf[13];
+  salt_buf0[14] = esalt_bufs[digests_offset].salt_buf[14];
+  salt_buf0[15] = esalt_bufs[digests_offset].salt_buf[15];
+  salt_buf1[ 0] = esalt_bufs[digests_offset].salt_buf[16];
+  salt_buf1[ 1] = esalt_bufs[digests_offset].salt_buf[17];
+  salt_buf1[ 2] = esalt_bufs[digests_offset].salt_buf[18];
+  salt_buf1[ 3] = esalt_bufs[digests_offset].salt_buf[19];
+  salt_buf1[ 4] = esalt_bufs[digests_offset].salt_buf[20];
+  salt_buf1[ 5] = esalt_bufs[digests_offset].salt_buf[21];
+  salt_buf1[ 6] = esalt_bufs[digests_offset].salt_buf[22];
+  salt_buf1[ 7] = esalt_bufs[digests_offset].salt_buf[23];
+  salt_buf1[ 8] = esalt_bufs[digests_offset].salt_buf[24];
+  salt_buf1[ 9] = esalt_bufs[digests_offset].salt_buf[25];
+  salt_buf1[10] = esalt_bufs[digests_offset].salt_buf[26];
+  salt_buf1[11] = esalt_bufs[digests_offset].salt_buf[27];
+  salt_buf1[12] = esalt_bufs[digests_offset].salt_buf[28];
+  salt_buf1[13] = esalt_bufs[digests_offset].salt_buf[29];
   salt_buf1[14] = 0;
   salt_buf1[15] = 0;
 
@@ -3667,50 +3665,50 @@ static void m11400s_0_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * esalt
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
 
   u32 esalt_buf0[16];
   u32 esalt_buf1[16];
   u32 esalt_buf2[16];
 
-  esalt_buf0[ 0] = esalt_bufs[salt_pos].esalt_buf[ 0];
-  esalt_buf0[ 1] = esalt_bufs[salt_pos].esalt_buf[ 1];
-  esalt_buf0[ 2] = esalt_bufs[salt_pos].esalt_buf[ 2];
-  esalt_buf0[ 3] = esalt_bufs[salt_pos].esalt_buf[ 3];
-  esalt_buf0[ 4] = esalt_bufs[salt_pos].esalt_buf[ 4];
-  esalt_buf0[ 5] = esalt_bufs[salt_pos].esalt_buf[ 5];
-  esalt_buf0[ 6] = esalt_bufs[salt_pos].esalt_buf[ 6];
-  esalt_buf0[ 7] = esalt_bufs[salt_pos].esalt_buf[ 7];
-  esalt_buf0[ 8] = esalt_bufs[salt_pos].esalt_buf[ 8];
-  esalt_buf0[ 9] = esalt_bufs[salt_pos].esalt_buf[ 9];
-  esalt_buf0[10] = esalt_bufs[salt_pos].esalt_buf[10];
-  esalt_buf0[11] = esalt_bufs[salt_pos].esalt_buf[11];
-  esalt_buf0[12] = esalt_bufs[salt_pos].esalt_buf[12];
-  esalt_buf0[13] = esalt_bufs[salt_pos].esalt_buf[13];
-  esalt_buf0[14] = esalt_bufs[salt_pos].esalt_buf[14];
-  esalt_buf0[15] = esalt_bufs[salt_pos].esalt_buf[15];
-  esalt_buf1[ 0] = esalt_bufs[salt_pos].esalt_buf[16];
-  esalt_buf1[ 1] = esalt_bufs[salt_pos].esalt_buf[17];
-  esalt_buf1[ 2] = esalt_bufs[salt_pos].esalt_buf[18];
-  esalt_buf1[ 3] = esalt_bufs[salt_pos].esalt_buf[19];
-  esalt_buf1[ 4] = esalt_bufs[salt_pos].esalt_buf[20];
-  esalt_buf1[ 5] = esalt_bufs[salt_pos].esalt_buf[21];
-  esalt_buf1[ 6] = esalt_bufs[salt_pos].esalt_buf[22];
-  esalt_buf1[ 7] = esalt_bufs[salt_pos].esalt_buf[23];
-  esalt_buf1[ 8] = esalt_bufs[salt_pos].esalt_buf[24];
-  esalt_buf1[ 9] = esalt_bufs[salt_pos].esalt_buf[25];
-  esalt_buf1[10] = esalt_bufs[salt_pos].esalt_buf[26];
-  esalt_buf1[11] = esalt_bufs[salt_pos].esalt_buf[27];
-  esalt_buf1[12] = esalt_bufs[salt_pos].esalt_buf[28];
-  esalt_buf1[13] = esalt_bufs[salt_pos].esalt_buf[29];
-  esalt_buf1[14] = esalt_bufs[salt_pos].esalt_buf[30];
-  esalt_buf1[15] = esalt_bufs[salt_pos].esalt_buf[31];
-  esalt_buf2[ 0] = esalt_bufs[salt_pos].esalt_buf[32];
-  esalt_buf2[ 1] = esalt_bufs[salt_pos].esalt_buf[33];
-  esalt_buf2[ 2] = esalt_bufs[salt_pos].esalt_buf[34];
-  esalt_buf2[ 3] = esalt_bufs[salt_pos].esalt_buf[35];
-  esalt_buf2[ 4] = esalt_bufs[salt_pos].esalt_buf[36];
-  esalt_buf2[ 5] = esalt_bufs[salt_pos].esalt_buf[37];
+  esalt_buf0[ 0] = esalt_bufs[digests_offset].esalt_buf[ 0];
+  esalt_buf0[ 1] = esalt_bufs[digests_offset].esalt_buf[ 1];
+  esalt_buf0[ 2] = esalt_bufs[digests_offset].esalt_buf[ 2];
+  esalt_buf0[ 3] = esalt_bufs[digests_offset].esalt_buf[ 3];
+  esalt_buf0[ 4] = esalt_bufs[digests_offset].esalt_buf[ 4];
+  esalt_buf0[ 5] = esalt_bufs[digests_offset].esalt_buf[ 5];
+  esalt_buf0[ 6] = esalt_bufs[digests_offset].esalt_buf[ 6];
+  esalt_buf0[ 7] = esalt_bufs[digests_offset].esalt_buf[ 7];
+  esalt_buf0[ 8] = esalt_bufs[digests_offset].esalt_buf[ 8];
+  esalt_buf0[ 9] = esalt_bufs[digests_offset].esalt_buf[ 9];
+  esalt_buf0[10] = esalt_bufs[digests_offset].esalt_buf[10];
+  esalt_buf0[11] = esalt_bufs[digests_offset].esalt_buf[11];
+  esalt_buf0[12] = esalt_bufs[digests_offset].esalt_buf[12];
+  esalt_buf0[13] = esalt_bufs[digests_offset].esalt_buf[13];
+  esalt_buf0[14] = esalt_bufs[digests_offset].esalt_buf[14];
+  esalt_buf0[15] = esalt_bufs[digests_offset].esalt_buf[15];
+  esalt_buf1[ 0] = esalt_bufs[digests_offset].esalt_buf[16];
+  esalt_buf1[ 1] = esalt_bufs[digests_offset].esalt_buf[17];
+  esalt_buf1[ 2] = esalt_bufs[digests_offset].esalt_buf[18];
+  esalt_buf1[ 3] = esalt_bufs[digests_offset].esalt_buf[19];
+  esalt_buf1[ 4] = esalt_bufs[digests_offset].esalt_buf[20];
+  esalt_buf1[ 5] = esalt_bufs[digests_offset].esalt_buf[21];
+  esalt_buf1[ 6] = esalt_bufs[digests_offset].esalt_buf[22];
+  esalt_buf1[ 7] = esalt_bufs[digests_offset].esalt_buf[23];
+  esalt_buf1[ 8] = esalt_bufs[digests_offset].esalt_buf[24];
+  esalt_buf1[ 9] = esalt_bufs[digests_offset].esalt_buf[25];
+  esalt_buf1[10] = esalt_bufs[digests_offset].esalt_buf[26];
+  esalt_buf1[11] = esalt_bufs[digests_offset].esalt_buf[27];
+  esalt_buf1[12] = esalt_bufs[digests_offset].esalt_buf[28];
+  esalt_buf1[13] = esalt_bufs[digests_offset].esalt_buf[29];
+  esalt_buf1[14] = esalt_bufs[digests_offset].esalt_buf[30];
+  esalt_buf1[15] = esalt_bufs[digests_offset].esalt_buf[31];
+  esalt_buf2[ 0] = esalt_bufs[digests_offset].esalt_buf[32];
+  esalt_buf2[ 1] = esalt_bufs[digests_offset].esalt_buf[33];
+  esalt_buf2[ 2] = esalt_bufs[digests_offset].esalt_buf[34];
+  esalt_buf2[ 3] = esalt_bufs[digests_offset].esalt_buf[35];
+  esalt_buf2[ 4] = esalt_bufs[digests_offset].esalt_buf[36];
+  esalt_buf2[ 5] = esalt_bufs[digests_offset].esalt_buf[37];
   esalt_buf2[ 6] = 0;
   esalt_buf2[ 7] = 0;
   esalt_buf2[ 8] = 0;
@@ -4208,7 +4206,7 @@ static void m11400s_0_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
   }
 }
 
-static void m11400s_1_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
+void m11400s_1_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
 {
   /**
    * modifier
@@ -4233,43 +4231,43 @@ static void m11400s_1_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * salt
    */
 
-  const u32 salt_len = esalt_bufs[salt_pos].salt_len; // not a bug, we need to get it from the esalt
+  const u32 salt_len = esalt_bufs[digests_offset].salt_len; // not a bug, we need to get it from the esalt
 
   const u32 pw_salt_len = salt_len + pw_len;
 
   u32 salt_buf0[16];
   u32 salt_buf1[16];
 
-  salt_buf0[ 0] = esalt_bufs[salt_pos].salt_buf[ 0];
-  salt_buf0[ 1] = esalt_bufs[salt_pos].salt_buf[ 1];
-  salt_buf0[ 2] = esalt_bufs[salt_pos].salt_buf[ 2];
-  salt_buf0[ 3] = esalt_bufs[salt_pos].salt_buf[ 3];
-  salt_buf0[ 4] = esalt_bufs[salt_pos].salt_buf[ 4];
-  salt_buf0[ 5] = esalt_bufs[salt_pos].salt_buf[ 5];
-  salt_buf0[ 6] = esalt_bufs[salt_pos].salt_buf[ 6];
-  salt_buf0[ 7] = esalt_bufs[salt_pos].salt_buf[ 7];
-  salt_buf0[ 8] = esalt_bufs[salt_pos].salt_buf[ 8];
-  salt_buf0[ 9] = esalt_bufs[salt_pos].salt_buf[ 9];
-  salt_buf0[10] = esalt_bufs[salt_pos].salt_buf[10];
-  salt_buf0[11] = esalt_bufs[salt_pos].salt_buf[11];
-  salt_buf0[12] = esalt_bufs[salt_pos].salt_buf[12];
-  salt_buf0[13] = esalt_bufs[salt_pos].salt_buf[13];
-  salt_buf0[14] = esalt_bufs[salt_pos].salt_buf[14];
-  salt_buf0[15] = esalt_bufs[salt_pos].salt_buf[15];
-  salt_buf1[ 0] = esalt_bufs[salt_pos].salt_buf[16];
-  salt_buf1[ 1] = esalt_bufs[salt_pos].salt_buf[17];
-  salt_buf1[ 2] = esalt_bufs[salt_pos].salt_buf[18];
-  salt_buf1[ 3] = esalt_bufs[salt_pos].salt_buf[19];
-  salt_buf1[ 4] = esalt_bufs[salt_pos].salt_buf[20];
-  salt_buf1[ 5] = esalt_bufs[salt_pos].salt_buf[21];
-  salt_buf1[ 6] = esalt_bufs[salt_pos].salt_buf[22];
-  salt_buf1[ 7] = esalt_bufs[salt_pos].salt_buf[23];
-  salt_buf1[ 8] = esalt_bufs[salt_pos].salt_buf[24];
-  salt_buf1[ 9] = esalt_bufs[salt_pos].salt_buf[25];
-  salt_buf1[10] = esalt_bufs[salt_pos].salt_buf[26];
-  salt_buf1[11] = esalt_bufs[salt_pos].salt_buf[27];
-  salt_buf1[12] = esalt_bufs[salt_pos].salt_buf[28];
-  salt_buf1[13] = esalt_bufs[salt_pos].salt_buf[29];
+  salt_buf0[ 0] = esalt_bufs[digests_offset].salt_buf[ 0];
+  salt_buf0[ 1] = esalt_bufs[digests_offset].salt_buf[ 1];
+  salt_buf0[ 2] = esalt_bufs[digests_offset].salt_buf[ 2];
+  salt_buf0[ 3] = esalt_bufs[digests_offset].salt_buf[ 3];
+  salt_buf0[ 4] = esalt_bufs[digests_offset].salt_buf[ 4];
+  salt_buf0[ 5] = esalt_bufs[digests_offset].salt_buf[ 5];
+  salt_buf0[ 6] = esalt_bufs[digests_offset].salt_buf[ 6];
+  salt_buf0[ 7] = esalt_bufs[digests_offset].salt_buf[ 7];
+  salt_buf0[ 8] = esalt_bufs[digests_offset].salt_buf[ 8];
+  salt_buf0[ 9] = esalt_bufs[digests_offset].salt_buf[ 9];
+  salt_buf0[10] = esalt_bufs[digests_offset].salt_buf[10];
+  salt_buf0[11] = esalt_bufs[digests_offset].salt_buf[11];
+  salt_buf0[12] = esalt_bufs[digests_offset].salt_buf[12];
+  salt_buf0[13] = esalt_bufs[digests_offset].salt_buf[13];
+  salt_buf0[14] = esalt_bufs[digests_offset].salt_buf[14];
+  salt_buf0[15] = esalt_bufs[digests_offset].salt_buf[15];
+  salt_buf1[ 0] = esalt_bufs[digests_offset].salt_buf[16];
+  salt_buf1[ 1] = esalt_bufs[digests_offset].salt_buf[17];
+  salt_buf1[ 2] = esalt_bufs[digests_offset].salt_buf[18];
+  salt_buf1[ 3] = esalt_bufs[digests_offset].salt_buf[19];
+  salt_buf1[ 4] = esalt_bufs[digests_offset].salt_buf[20];
+  salt_buf1[ 5] = esalt_bufs[digests_offset].salt_buf[21];
+  salt_buf1[ 6] = esalt_bufs[digests_offset].salt_buf[22];
+  salt_buf1[ 7] = esalt_bufs[digests_offset].salt_buf[23];
+  salt_buf1[ 8] = esalt_bufs[digests_offset].salt_buf[24];
+  salt_buf1[ 9] = esalt_bufs[digests_offset].salt_buf[25];
+  salt_buf1[10] = esalt_bufs[digests_offset].salt_buf[26];
+  salt_buf1[11] = esalt_bufs[digests_offset].salt_buf[27];
+  salt_buf1[12] = esalt_bufs[digests_offset].salt_buf[28];
+  salt_buf1[13] = esalt_bufs[digests_offset].salt_buf[29];
   salt_buf1[14] = 0;
   salt_buf1[15] = 0;
 
@@ -4277,43 +4275,43 @@ static void m11400s_1_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * esalt
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
 
   u32 esalt_buf0[16];
   u32 esalt_buf1[16];
 
-  esalt_buf0[ 0] = esalt_bufs[salt_pos].esalt_buf[ 0];
-  esalt_buf0[ 1] = esalt_bufs[salt_pos].esalt_buf[ 1];
-  esalt_buf0[ 2] = esalt_bufs[salt_pos].esalt_buf[ 2];
-  esalt_buf0[ 3] = esalt_bufs[salt_pos].esalt_buf[ 3];
-  esalt_buf0[ 4] = esalt_bufs[salt_pos].esalt_buf[ 4];
-  esalt_buf0[ 5] = esalt_bufs[salt_pos].esalt_buf[ 5];
-  esalt_buf0[ 6] = esalt_bufs[salt_pos].esalt_buf[ 6];
-  esalt_buf0[ 7] = esalt_bufs[salt_pos].esalt_buf[ 7];
-  esalt_buf0[ 8] = esalt_bufs[salt_pos].esalt_buf[ 8];
-  esalt_buf0[ 9] = esalt_bufs[salt_pos].esalt_buf[ 9];
-  esalt_buf0[10] = esalt_bufs[salt_pos].esalt_buf[10];
-  esalt_buf0[11] = esalt_bufs[salt_pos].esalt_buf[11];
-  esalt_buf0[12] = esalt_bufs[salt_pos].esalt_buf[12];
-  esalt_buf0[13] = esalt_bufs[salt_pos].esalt_buf[13];
-  esalt_buf0[14] = esalt_bufs[salt_pos].esalt_buf[14];
-  esalt_buf0[15] = esalt_bufs[salt_pos].esalt_buf[15];
-  esalt_buf1[ 0] = esalt_bufs[salt_pos].esalt_buf[16];
-  esalt_buf1[ 1] = esalt_bufs[salt_pos].esalt_buf[17];
-  esalt_buf1[ 2] = esalt_bufs[salt_pos].esalt_buf[18];
-  esalt_buf1[ 3] = esalt_bufs[salt_pos].esalt_buf[19];
-  esalt_buf1[ 4] = esalt_bufs[salt_pos].esalt_buf[20];
-  esalt_buf1[ 5] = esalt_bufs[salt_pos].esalt_buf[21];
-  esalt_buf1[ 6] = esalt_bufs[salt_pos].esalt_buf[22];
-  esalt_buf1[ 7] = esalt_bufs[salt_pos].esalt_buf[23];
-  esalt_buf1[ 8] = esalt_bufs[salt_pos].esalt_buf[24];
-  esalt_buf1[ 9] = esalt_bufs[salt_pos].esalt_buf[25];
-  esalt_buf1[10] = esalt_bufs[salt_pos].esalt_buf[26];
-  esalt_buf1[11] = esalt_bufs[salt_pos].esalt_buf[27];
-  esalt_buf1[12] = esalt_bufs[salt_pos].esalt_buf[28];
-  esalt_buf1[13] = esalt_bufs[salt_pos].esalt_buf[29];
-  esalt_buf1[14] = esalt_bufs[salt_pos].esalt_buf[30];
-  esalt_buf1[15] = esalt_bufs[salt_pos].esalt_buf[31];
+  esalt_buf0[ 0] = esalt_bufs[digests_offset].esalt_buf[ 0];
+  esalt_buf0[ 1] = esalt_bufs[digests_offset].esalt_buf[ 1];
+  esalt_buf0[ 2] = esalt_bufs[digests_offset].esalt_buf[ 2];
+  esalt_buf0[ 3] = esalt_bufs[digests_offset].esalt_buf[ 3];
+  esalt_buf0[ 4] = esalt_bufs[digests_offset].esalt_buf[ 4];
+  esalt_buf0[ 5] = esalt_bufs[digests_offset].esalt_buf[ 5];
+  esalt_buf0[ 6] = esalt_bufs[digests_offset].esalt_buf[ 6];
+  esalt_buf0[ 7] = esalt_bufs[digests_offset].esalt_buf[ 7];
+  esalt_buf0[ 8] = esalt_bufs[digests_offset].esalt_buf[ 8];
+  esalt_buf0[ 9] = esalt_bufs[digests_offset].esalt_buf[ 9];
+  esalt_buf0[10] = esalt_bufs[digests_offset].esalt_buf[10];
+  esalt_buf0[11] = esalt_bufs[digests_offset].esalt_buf[11];
+  esalt_buf0[12] = esalt_bufs[digests_offset].esalt_buf[12];
+  esalt_buf0[13] = esalt_bufs[digests_offset].esalt_buf[13];
+  esalt_buf0[14] = esalt_bufs[digests_offset].esalt_buf[14];
+  esalt_buf0[15] = esalt_bufs[digests_offset].esalt_buf[15];
+  esalt_buf1[ 0] = esalt_bufs[digests_offset].esalt_buf[16];
+  esalt_buf1[ 1] = esalt_bufs[digests_offset].esalt_buf[17];
+  esalt_buf1[ 2] = esalt_bufs[digests_offset].esalt_buf[18];
+  esalt_buf1[ 3] = esalt_bufs[digests_offset].esalt_buf[19];
+  esalt_buf1[ 4] = esalt_bufs[digests_offset].esalt_buf[20];
+  esalt_buf1[ 5] = esalt_bufs[digests_offset].esalt_buf[21];
+  esalt_buf1[ 6] = esalt_bufs[digests_offset].esalt_buf[22];
+  esalt_buf1[ 7] = esalt_bufs[digests_offset].esalt_buf[23];
+  esalt_buf1[ 8] = esalt_bufs[digests_offset].esalt_buf[24];
+  esalt_buf1[ 9] = esalt_bufs[digests_offset].esalt_buf[25];
+  esalt_buf1[10] = esalt_bufs[digests_offset].esalt_buf[26];
+  esalt_buf1[11] = esalt_bufs[digests_offset].esalt_buf[27];
+  esalt_buf1[12] = esalt_bufs[digests_offset].esalt_buf[28];
+  esalt_buf1[13] = esalt_bufs[digests_offset].esalt_buf[29];
+  esalt_buf1[14] = esalt_bufs[digests_offset].esalt_buf[30];
+  esalt_buf1[15] = esalt_bufs[digests_offset].esalt_buf[31];
 
   const u32 digest_esalt_len = 32 + esalt_len;
 
@@ -4799,7 +4797,7 @@ static void m11400s_1_0 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
   }
 }
 
-static void m11400s_1_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
+void m11400s_1_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 pw_len, __global pw_t *pws, __global const kernel_rule_t *rules_buf, __global const comb_t *combs_buf, __global const bf_t *bfs_buf, __global void *tmps, __global void *hooks, __global const u32 *bitmaps_buf_s1_a, __global const u32 *bitmaps_buf_s1_b, __global const u32 *bitmaps_buf_s1_c, __global const u32 *bitmaps_buf_s1_d, __global const u32 *bitmaps_buf_s2_a, __global const u32 *bitmaps_buf_s2_b, __global const u32 *bitmaps_buf_s2_c, __global const u32 *bitmaps_buf_s2_d, __global plain_t *plains_buf, __global const digest_t *digests_buf, __global u32 *hashes_shown, __global const salt_t *salt_bufs, __global sip_t *esalt_bufs, __global u32 *d_return_buf, __global u32 *d_scryptV0_buf, __global u32 *d_scryptV1_buf, __global u32 *d_scryptV2_buf, __global u32 *d_scryptV3_buf, const u32 bitmap_mask, const u32 bitmap_shift1, const u32 bitmap_shift2, const u32 salt_pos, const u32 loop_pos, const u32 loop_cnt, const u32 il_cnt, const u32 digests_cnt, const u32 digests_offset, __local u32 *l_bin2asc)
 {
   /**
    * modifier
@@ -4824,43 +4822,43 @@ static void m11400s_1_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * salt
    */
 
-  const u32 salt_len = esalt_bufs[salt_pos].salt_len; // not a bug, we need to get it from the esalt
+  const u32 salt_len = esalt_bufs[digests_offset].salt_len; // not a bug, we need to get it from the esalt
 
   const u32 pw_salt_len = salt_len + pw_len;
 
   u32 salt_buf0[16];
   u32 salt_buf1[16];
 
-  salt_buf0[ 0] = esalt_bufs[salt_pos].salt_buf[ 0];
-  salt_buf0[ 1] = esalt_bufs[salt_pos].salt_buf[ 1];
-  salt_buf0[ 2] = esalt_bufs[salt_pos].salt_buf[ 2];
-  salt_buf0[ 3] = esalt_bufs[salt_pos].salt_buf[ 3];
-  salt_buf0[ 4] = esalt_bufs[salt_pos].salt_buf[ 4];
-  salt_buf0[ 5] = esalt_bufs[salt_pos].salt_buf[ 5];
-  salt_buf0[ 6] = esalt_bufs[salt_pos].salt_buf[ 6];
-  salt_buf0[ 7] = esalt_bufs[salt_pos].salt_buf[ 7];
-  salt_buf0[ 8] = esalt_bufs[salt_pos].salt_buf[ 8];
-  salt_buf0[ 9] = esalt_bufs[salt_pos].salt_buf[ 9];
-  salt_buf0[10] = esalt_bufs[salt_pos].salt_buf[10];
-  salt_buf0[11] = esalt_bufs[salt_pos].salt_buf[11];
-  salt_buf0[12] = esalt_bufs[salt_pos].salt_buf[12];
-  salt_buf0[13] = esalt_bufs[salt_pos].salt_buf[13];
-  salt_buf0[14] = esalt_bufs[salt_pos].salt_buf[14];
-  salt_buf0[15] = esalt_bufs[salt_pos].salt_buf[15];
-  salt_buf1[ 0] = esalt_bufs[salt_pos].salt_buf[16];
-  salt_buf1[ 1] = esalt_bufs[salt_pos].salt_buf[17];
-  salt_buf1[ 2] = esalt_bufs[salt_pos].salt_buf[18];
-  salt_buf1[ 3] = esalt_bufs[salt_pos].salt_buf[19];
-  salt_buf1[ 4] = esalt_bufs[salt_pos].salt_buf[20];
-  salt_buf1[ 5] = esalt_bufs[salt_pos].salt_buf[21];
-  salt_buf1[ 6] = esalt_bufs[salt_pos].salt_buf[22];
-  salt_buf1[ 7] = esalt_bufs[salt_pos].salt_buf[23];
-  salt_buf1[ 8] = esalt_bufs[salt_pos].salt_buf[24];
-  salt_buf1[ 9] = esalt_bufs[salt_pos].salt_buf[25];
-  salt_buf1[10] = esalt_bufs[salt_pos].salt_buf[26];
-  salt_buf1[11] = esalt_bufs[salt_pos].salt_buf[27];
-  salt_buf1[12] = esalt_bufs[salt_pos].salt_buf[28];
-  salt_buf1[13] = esalt_bufs[salt_pos].salt_buf[29];
+  salt_buf0[ 0] = esalt_bufs[digests_offset].salt_buf[ 0];
+  salt_buf0[ 1] = esalt_bufs[digests_offset].salt_buf[ 1];
+  salt_buf0[ 2] = esalt_bufs[digests_offset].salt_buf[ 2];
+  salt_buf0[ 3] = esalt_bufs[digests_offset].salt_buf[ 3];
+  salt_buf0[ 4] = esalt_bufs[digests_offset].salt_buf[ 4];
+  salt_buf0[ 5] = esalt_bufs[digests_offset].salt_buf[ 5];
+  salt_buf0[ 6] = esalt_bufs[digests_offset].salt_buf[ 6];
+  salt_buf0[ 7] = esalt_bufs[digests_offset].salt_buf[ 7];
+  salt_buf0[ 8] = esalt_bufs[digests_offset].salt_buf[ 8];
+  salt_buf0[ 9] = esalt_bufs[digests_offset].salt_buf[ 9];
+  salt_buf0[10] = esalt_bufs[digests_offset].salt_buf[10];
+  salt_buf0[11] = esalt_bufs[digests_offset].salt_buf[11];
+  salt_buf0[12] = esalt_bufs[digests_offset].salt_buf[12];
+  salt_buf0[13] = esalt_bufs[digests_offset].salt_buf[13];
+  salt_buf0[14] = esalt_bufs[digests_offset].salt_buf[14];
+  salt_buf0[15] = esalt_bufs[digests_offset].salt_buf[15];
+  salt_buf1[ 0] = esalt_bufs[digests_offset].salt_buf[16];
+  salt_buf1[ 1] = esalt_bufs[digests_offset].salt_buf[17];
+  salt_buf1[ 2] = esalt_bufs[digests_offset].salt_buf[18];
+  salt_buf1[ 3] = esalt_bufs[digests_offset].salt_buf[19];
+  salt_buf1[ 4] = esalt_bufs[digests_offset].salt_buf[20];
+  salt_buf1[ 5] = esalt_bufs[digests_offset].salt_buf[21];
+  salt_buf1[ 6] = esalt_bufs[digests_offset].salt_buf[22];
+  salt_buf1[ 7] = esalt_bufs[digests_offset].salt_buf[23];
+  salt_buf1[ 8] = esalt_bufs[digests_offset].salt_buf[24];
+  salt_buf1[ 9] = esalt_bufs[digests_offset].salt_buf[25];
+  salt_buf1[10] = esalt_bufs[digests_offset].salt_buf[26];
+  salt_buf1[11] = esalt_bufs[digests_offset].salt_buf[27];
+  salt_buf1[12] = esalt_bufs[digests_offset].salt_buf[28];
+  salt_buf1[13] = esalt_bufs[digests_offset].salt_buf[29];
   salt_buf1[14] = 0;
   salt_buf1[15] = 0;
 
@@ -4868,50 +4866,50 @@ static void m11400s_1_1 (u32 w0[4], u32 w1[4], u32 w2[4], u32 w3[4], const u32 p
    * esalt
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
 
   u32 esalt_buf0[16];
   u32 esalt_buf1[16];
   u32 esalt_buf2[16];
 
-  esalt_buf0[ 0] = esalt_bufs[salt_pos].esalt_buf[ 0];
-  esalt_buf0[ 1] = esalt_bufs[salt_pos].esalt_buf[ 1];
-  esalt_buf0[ 2] = esalt_bufs[salt_pos].esalt_buf[ 2];
-  esalt_buf0[ 3] = esalt_bufs[salt_pos].esalt_buf[ 3];
-  esalt_buf0[ 4] = esalt_bufs[salt_pos].esalt_buf[ 4];
-  esalt_buf0[ 5] = esalt_bufs[salt_pos].esalt_buf[ 5];
-  esalt_buf0[ 6] = esalt_bufs[salt_pos].esalt_buf[ 6];
-  esalt_buf0[ 7] = esalt_bufs[salt_pos].esalt_buf[ 7];
-  esalt_buf0[ 8] = esalt_bufs[salt_pos].esalt_buf[ 8];
-  esalt_buf0[ 9] = esalt_bufs[salt_pos].esalt_buf[ 9];
-  esalt_buf0[10] = esalt_bufs[salt_pos].esalt_buf[10];
-  esalt_buf0[11] = esalt_bufs[salt_pos].esalt_buf[11];
-  esalt_buf0[12] = esalt_bufs[salt_pos].esalt_buf[12];
-  esalt_buf0[13] = esalt_bufs[salt_pos].esalt_buf[13];
-  esalt_buf0[14] = esalt_bufs[salt_pos].esalt_buf[14];
-  esalt_buf0[15] = esalt_bufs[salt_pos].esalt_buf[15];
-  esalt_buf1[ 0] = esalt_bufs[salt_pos].esalt_buf[16];
-  esalt_buf1[ 1] = esalt_bufs[salt_pos].esalt_buf[17];
-  esalt_buf1[ 2] = esalt_bufs[salt_pos].esalt_buf[18];
-  esalt_buf1[ 3] = esalt_bufs[salt_pos].esalt_buf[19];
-  esalt_buf1[ 4] = esalt_bufs[salt_pos].esalt_buf[20];
-  esalt_buf1[ 5] = esalt_bufs[salt_pos].esalt_buf[21];
-  esalt_buf1[ 6] = esalt_bufs[salt_pos].esalt_buf[22];
-  esalt_buf1[ 7] = esalt_bufs[salt_pos].esalt_buf[23];
-  esalt_buf1[ 8] = esalt_bufs[salt_pos].esalt_buf[24];
-  esalt_buf1[ 9] = esalt_bufs[salt_pos].esalt_buf[25];
-  esalt_buf1[10] = esalt_bufs[salt_pos].esalt_buf[26];
-  esalt_buf1[11] = esalt_bufs[salt_pos].esalt_buf[27];
-  esalt_buf1[12] = esalt_bufs[salt_pos].esalt_buf[28];
-  esalt_buf1[13] = esalt_bufs[salt_pos].esalt_buf[29];
-  esalt_buf1[14] = esalt_bufs[salt_pos].esalt_buf[30];
-  esalt_buf1[15] = esalt_bufs[salt_pos].esalt_buf[31];
-  esalt_buf2[ 0] = esalt_bufs[salt_pos].esalt_buf[32];
-  esalt_buf2[ 1] = esalt_bufs[salt_pos].esalt_buf[33];
-  esalt_buf2[ 2] = esalt_bufs[salt_pos].esalt_buf[34];
-  esalt_buf2[ 3] = esalt_bufs[salt_pos].esalt_buf[35];
-  esalt_buf2[ 4] = esalt_bufs[salt_pos].esalt_buf[36];
-  esalt_buf2[ 5] = esalt_bufs[salt_pos].esalt_buf[37];
+  esalt_buf0[ 0] = esalt_bufs[digests_offset].esalt_buf[ 0];
+  esalt_buf0[ 1] = esalt_bufs[digests_offset].esalt_buf[ 1];
+  esalt_buf0[ 2] = esalt_bufs[digests_offset].esalt_buf[ 2];
+  esalt_buf0[ 3] = esalt_bufs[digests_offset].esalt_buf[ 3];
+  esalt_buf0[ 4] = esalt_bufs[digests_offset].esalt_buf[ 4];
+  esalt_buf0[ 5] = esalt_bufs[digests_offset].esalt_buf[ 5];
+  esalt_buf0[ 6] = esalt_bufs[digests_offset].esalt_buf[ 6];
+  esalt_buf0[ 7] = esalt_bufs[digests_offset].esalt_buf[ 7];
+  esalt_buf0[ 8] = esalt_bufs[digests_offset].esalt_buf[ 8];
+  esalt_buf0[ 9] = esalt_bufs[digests_offset].esalt_buf[ 9];
+  esalt_buf0[10] = esalt_bufs[digests_offset].esalt_buf[10];
+  esalt_buf0[11] = esalt_bufs[digests_offset].esalt_buf[11];
+  esalt_buf0[12] = esalt_bufs[digests_offset].esalt_buf[12];
+  esalt_buf0[13] = esalt_bufs[digests_offset].esalt_buf[13];
+  esalt_buf0[14] = esalt_bufs[digests_offset].esalt_buf[14];
+  esalt_buf0[15] = esalt_bufs[digests_offset].esalt_buf[15];
+  esalt_buf1[ 0] = esalt_bufs[digests_offset].esalt_buf[16];
+  esalt_buf1[ 1] = esalt_bufs[digests_offset].esalt_buf[17];
+  esalt_buf1[ 2] = esalt_bufs[digests_offset].esalt_buf[18];
+  esalt_buf1[ 3] = esalt_bufs[digests_offset].esalt_buf[19];
+  esalt_buf1[ 4] = esalt_bufs[digests_offset].esalt_buf[20];
+  esalt_buf1[ 5] = esalt_bufs[digests_offset].esalt_buf[21];
+  esalt_buf1[ 6] = esalt_bufs[digests_offset].esalt_buf[22];
+  esalt_buf1[ 7] = esalt_bufs[digests_offset].esalt_buf[23];
+  esalt_buf1[ 8] = esalt_bufs[digests_offset].esalt_buf[24];
+  esalt_buf1[ 9] = esalt_bufs[digests_offset].esalt_buf[25];
+  esalt_buf1[10] = esalt_bufs[digests_offset].esalt_buf[26];
+  esalt_buf1[11] = esalt_bufs[digests_offset].esalt_buf[27];
+  esalt_buf1[12] = esalt_bufs[digests_offset].esalt_buf[28];
+  esalt_buf1[13] = esalt_bufs[digests_offset].esalt_buf[29];
+  esalt_buf1[14] = esalt_bufs[digests_offset].esalt_buf[30];
+  esalt_buf1[15] = esalt_bufs[digests_offset].esalt_buf[31];
+  esalt_buf2[ 0] = esalt_bufs[digests_offset].esalt_buf[32];
+  esalt_buf2[ 1] = esalt_bufs[digests_offset].esalt_buf[33];
+  esalt_buf2[ 2] = esalt_bufs[digests_offset].esalt_buf[34];
+  esalt_buf2[ 3] = esalt_bufs[digests_offset].esalt_buf[35];
+  esalt_buf2[ 4] = esalt_bufs[digests_offset].esalt_buf[36];
+  esalt_buf2[ 5] = esalt_bufs[digests_offset].esalt_buf[37];
   esalt_buf2[ 6] = 0;
   esalt_buf2[ 7] = 0;
   esalt_buf2[ 8] = 0;
@@ -5571,8 +5569,8 @@ __kernel void m11400_m04 (__global pw_t *pws, __global const kernel_rule_t *rule
    * main
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
-  const u32 salt_len  = esalt_bufs[salt_pos].salt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
+  const u32 salt_len  = esalt_bufs[digests_offset].salt_len;
 
   const u32 sw_1 = ((32 + esalt_len + 1) > 119);
   const u32 sw_2 = ((pw_len + salt_len)  >  55) << 1;
@@ -5661,8 +5659,8 @@ __kernel void m11400_m08 (__global pw_t *pws, __global const kernel_rule_t *rule
    * main
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
-  const u32 salt_len  = esalt_bufs[salt_pos].salt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
+  const u32 salt_len  = esalt_bufs[digests_offset].salt_len;
 
   const u32 sw_1 = ((32 + esalt_len + 1) > 119);
   const u32 sw_2 = ((pw_len + salt_len)  >  55) << 1;
@@ -5751,8 +5749,8 @@ __kernel void m11400_m16 (__global pw_t *pws, __global const kernel_rule_t *rule
    * main
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
-  const u32 salt_len  = esalt_bufs[salt_pos].salt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
+  const u32 salt_len  = esalt_bufs[digests_offset].salt_len;
 
   const u32 sw_1 = ((32 + esalt_len + 1) > 119);
   const u32 sw_2 = ((pw_len + salt_len)  >  55) << 1;
@@ -5841,8 +5839,8 @@ __kernel void m11400_s04 (__global pw_t *pws, __global const kernel_rule_t *rule
    * main
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
-  const u32 salt_len  = esalt_bufs[salt_pos].salt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
+  const u32 salt_len  = esalt_bufs[digests_offset].salt_len;
 
   const u32 sw_1 = ((32 + esalt_len + 1) > 119);
   const u32 sw_2 = ((pw_len + salt_len)  >  55) << 1;
@@ -5931,8 +5929,8 @@ __kernel void m11400_s08 (__global pw_t *pws, __global const kernel_rule_t *rule
    * main
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
-  const u32 salt_len  = esalt_bufs[salt_pos].salt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
+  const u32 salt_len  = esalt_bufs[digests_offset].salt_len;
 
   const u32 sw_1 = ((32 + esalt_len + 1) > 119);
   const u32 sw_2 = ((pw_len + salt_len)  >  55) << 1;
@@ -6021,8 +6019,8 @@ __kernel void m11400_s16 (__global pw_t *pws, __global const kernel_rule_t *rule
    * main
    */
 
-  const u32 esalt_len = esalt_bufs[salt_pos].esalt_len;
-  const u32 salt_len  = esalt_bufs[salt_pos].salt_len;
+  const u32 esalt_len = esalt_bufs[digests_offset].esalt_len;
+  const u32 salt_len  = esalt_bufs[digests_offset].salt_len;
 
   const u32 sw_1 = ((32 + esalt_len + 1) > 119);
   const u32 sw_2 = ((pw_len + salt_len)  >  55) << 1;

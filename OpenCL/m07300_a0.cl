@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _SHA1_
-
 #define NEW_SIMD_CODE
 
 #include "inc_vendor.cl"
@@ -16,7 +14,7 @@
 #include "inc_rp.cl"
 #include "inc_simd.cl"
 
-static void sha1_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[5])
+void sha1_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4], const u32x w3[4], u32x digest[5])
 {
   u32x A = digest[0];
   u32x B = digest[1];
@@ -144,7 +142,7 @@ static void sha1_transform (const u32x w0[4], const u32x w1[4], const u32x w2[4]
   digest[4] += E;
 }
 
-static void hmac_sha1_pad (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[5], u32x opad[5])
+void hmac_sha1_pad (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[5], u32x opad[5])
 {
   w0[0] = w0[0] ^ 0x36363636;
   w0[1] = w0[1] ^ 0x36363636;
@@ -197,7 +195,7 @@ static void hmac_sha1_pad (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x 
   sha1_transform (w0, w1, w2, w3, opad);
 }
 
-static void hmac_sha1_run (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[5], u32x opad[5], u32x digest[5])
+void hmac_sha1_run (u32x w0[4], u32x w1[4], u32x w2[4], u32x w3[4], u32x ipad[5], u32x opad[5], u32x digest[5])
 {
   digest[0] = ipad[0];
   digest[1] = ipad[1];
@@ -267,7 +265,7 @@ __kernel void m07300_m04 (__global pw_t *pws, __global const kernel_rule_t *rule
    * salt
    */
 
-  const u32 esalt_len = rakp_bufs[salt_pos].salt_len;
+  const u32 esalt_len = rakp_bufs[digests_offset].salt_len;
 
   /**
    * loop
@@ -307,40 +305,40 @@ __kernel void m07300_m04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
     for (esalt_left = esalt_size, esalt_off = 0; esalt_left >= 56; esalt_left -= 64, esalt_off += 16)
     {
-      w0[0] = rakp_bufs[salt_pos].salt_buf[esalt_off +  0];
-      w0[1] = rakp_bufs[salt_pos].salt_buf[esalt_off +  1];
-      w0[2] = rakp_bufs[salt_pos].salt_buf[esalt_off +  2];
-      w0[3] = rakp_bufs[salt_pos].salt_buf[esalt_off +  3];
-      w1[0] = rakp_bufs[salt_pos].salt_buf[esalt_off +  4];
-      w1[1] = rakp_bufs[salt_pos].salt_buf[esalt_off +  5];
-      w1[2] = rakp_bufs[salt_pos].salt_buf[esalt_off +  6];
-      w1[3] = rakp_bufs[salt_pos].salt_buf[esalt_off +  7];
-      w2[0] = rakp_bufs[salt_pos].salt_buf[esalt_off +  8];
-      w2[1] = rakp_bufs[salt_pos].salt_buf[esalt_off +  9];
-      w2[2] = rakp_bufs[salt_pos].salt_buf[esalt_off + 10];
-      w2[3] = rakp_bufs[salt_pos].salt_buf[esalt_off + 11];
-      w3[0] = rakp_bufs[salt_pos].salt_buf[esalt_off + 12];
-      w3[1] = rakp_bufs[salt_pos].salt_buf[esalt_off + 13];
-      w3[2] = rakp_bufs[salt_pos].salt_buf[esalt_off + 14];
-      w3[3] = rakp_bufs[salt_pos].salt_buf[esalt_off + 15];
+      w0[0] = rakp_bufs[digests_offset].salt_buf[esalt_off +  0];
+      w0[1] = rakp_bufs[digests_offset].salt_buf[esalt_off +  1];
+      w0[2] = rakp_bufs[digests_offset].salt_buf[esalt_off +  2];
+      w0[3] = rakp_bufs[digests_offset].salt_buf[esalt_off +  3];
+      w1[0] = rakp_bufs[digests_offset].salt_buf[esalt_off +  4];
+      w1[1] = rakp_bufs[digests_offset].salt_buf[esalt_off +  5];
+      w1[2] = rakp_bufs[digests_offset].salt_buf[esalt_off +  6];
+      w1[3] = rakp_bufs[digests_offset].salt_buf[esalt_off +  7];
+      w2[0] = rakp_bufs[digests_offset].salt_buf[esalt_off +  8];
+      w2[1] = rakp_bufs[digests_offset].salt_buf[esalt_off +  9];
+      w2[2] = rakp_bufs[digests_offset].salt_buf[esalt_off + 10];
+      w2[3] = rakp_bufs[digests_offset].salt_buf[esalt_off + 11];
+      w3[0] = rakp_bufs[digests_offset].salt_buf[esalt_off + 12];
+      w3[1] = rakp_bufs[digests_offset].salt_buf[esalt_off + 13];
+      w3[2] = rakp_bufs[digests_offset].salt_buf[esalt_off + 14];
+      w3[3] = rakp_bufs[digests_offset].salt_buf[esalt_off + 15];
 
       sha1_transform (w0, w1, w2, w3, ipad);
     }
 
-    w0[0] = rakp_bufs[salt_pos].salt_buf[esalt_off +  0];
-    w0[1] = rakp_bufs[salt_pos].salt_buf[esalt_off +  1];
-    w0[2] = rakp_bufs[salt_pos].salt_buf[esalt_off +  2];
-    w0[3] = rakp_bufs[salt_pos].salt_buf[esalt_off +  3];
-    w1[0] = rakp_bufs[salt_pos].salt_buf[esalt_off +  4];
-    w1[1] = rakp_bufs[salt_pos].salt_buf[esalt_off +  5];
-    w1[2] = rakp_bufs[salt_pos].salt_buf[esalt_off +  6];
-    w1[3] = rakp_bufs[salt_pos].salt_buf[esalt_off +  7];
-    w2[0] = rakp_bufs[salt_pos].salt_buf[esalt_off +  8];
-    w2[1] = rakp_bufs[salt_pos].salt_buf[esalt_off +  9];
-    w2[2] = rakp_bufs[salt_pos].salt_buf[esalt_off + 10];
-    w2[3] = rakp_bufs[salt_pos].salt_buf[esalt_off + 11];
-    w3[0] = rakp_bufs[salt_pos].salt_buf[esalt_off + 12];
-    w3[1] = rakp_bufs[salt_pos].salt_buf[esalt_off + 13];
+    w0[0] = rakp_bufs[digests_offset].salt_buf[esalt_off +  0];
+    w0[1] = rakp_bufs[digests_offset].salt_buf[esalt_off +  1];
+    w0[2] = rakp_bufs[digests_offset].salt_buf[esalt_off +  2];
+    w0[3] = rakp_bufs[digests_offset].salt_buf[esalt_off +  3];
+    w1[0] = rakp_bufs[digests_offset].salt_buf[esalt_off +  4];
+    w1[1] = rakp_bufs[digests_offset].salt_buf[esalt_off +  5];
+    w1[2] = rakp_bufs[digests_offset].salt_buf[esalt_off +  6];
+    w1[3] = rakp_bufs[digests_offset].salt_buf[esalt_off +  7];
+    w2[0] = rakp_bufs[digests_offset].salt_buf[esalt_off +  8];
+    w2[1] = rakp_bufs[digests_offset].salt_buf[esalt_off +  9];
+    w2[2] = rakp_bufs[digests_offset].salt_buf[esalt_off + 10];
+    w2[3] = rakp_bufs[digests_offset].salt_buf[esalt_off + 11];
+    w3[0] = rakp_bufs[digests_offset].salt_buf[esalt_off + 12];
+    w3[1] = rakp_bufs[digests_offset].salt_buf[esalt_off + 13];
     w3[2] = 0;
     w3[3] = (64 + esalt_size) * 8;
 
@@ -394,7 +392,7 @@ __kernel void m07300_s04 (__global pw_t *pws, __global const kernel_rule_t *rule
    * salt
    */
 
-  const u32 esalt_len = rakp_bufs[salt_pos].salt_len;
+  const u32 esalt_len = rakp_bufs[digests_offset].salt_len;
 
   /**
    * digest
@@ -446,40 +444,40 @@ __kernel void m07300_s04 (__global pw_t *pws, __global const kernel_rule_t *rule
 
     for (esalt_left = esalt_size, esalt_off = 0; esalt_left >= 56; esalt_left -= 64, esalt_off += 16)
     {
-      w0[0] = rakp_bufs[salt_pos].salt_buf[esalt_off +  0];
-      w0[1] = rakp_bufs[salt_pos].salt_buf[esalt_off +  1];
-      w0[2] = rakp_bufs[salt_pos].salt_buf[esalt_off +  2];
-      w0[3] = rakp_bufs[salt_pos].salt_buf[esalt_off +  3];
-      w1[0] = rakp_bufs[salt_pos].salt_buf[esalt_off +  4];
-      w1[1] = rakp_bufs[salt_pos].salt_buf[esalt_off +  5];
-      w1[2] = rakp_bufs[salt_pos].salt_buf[esalt_off +  6];
-      w1[3] = rakp_bufs[salt_pos].salt_buf[esalt_off +  7];
-      w2[0] = rakp_bufs[salt_pos].salt_buf[esalt_off +  8];
-      w2[1] = rakp_bufs[salt_pos].salt_buf[esalt_off +  9];
-      w2[2] = rakp_bufs[salt_pos].salt_buf[esalt_off + 10];
-      w2[3] = rakp_bufs[salt_pos].salt_buf[esalt_off + 11];
-      w3[0] = rakp_bufs[salt_pos].salt_buf[esalt_off + 12];
-      w3[1] = rakp_bufs[salt_pos].salt_buf[esalt_off + 13];
-      w3[2] = rakp_bufs[salt_pos].salt_buf[esalt_off + 14];
-      w3[3] = rakp_bufs[salt_pos].salt_buf[esalt_off + 15];
+      w0[0] = rakp_bufs[digests_offset].salt_buf[esalt_off +  0];
+      w0[1] = rakp_bufs[digests_offset].salt_buf[esalt_off +  1];
+      w0[2] = rakp_bufs[digests_offset].salt_buf[esalt_off +  2];
+      w0[3] = rakp_bufs[digests_offset].salt_buf[esalt_off +  3];
+      w1[0] = rakp_bufs[digests_offset].salt_buf[esalt_off +  4];
+      w1[1] = rakp_bufs[digests_offset].salt_buf[esalt_off +  5];
+      w1[2] = rakp_bufs[digests_offset].salt_buf[esalt_off +  6];
+      w1[3] = rakp_bufs[digests_offset].salt_buf[esalt_off +  7];
+      w2[0] = rakp_bufs[digests_offset].salt_buf[esalt_off +  8];
+      w2[1] = rakp_bufs[digests_offset].salt_buf[esalt_off +  9];
+      w2[2] = rakp_bufs[digests_offset].salt_buf[esalt_off + 10];
+      w2[3] = rakp_bufs[digests_offset].salt_buf[esalt_off + 11];
+      w3[0] = rakp_bufs[digests_offset].salt_buf[esalt_off + 12];
+      w3[1] = rakp_bufs[digests_offset].salt_buf[esalt_off + 13];
+      w3[2] = rakp_bufs[digests_offset].salt_buf[esalt_off + 14];
+      w3[3] = rakp_bufs[digests_offset].salt_buf[esalt_off + 15];
 
       sha1_transform (w0, w1, w2, w3, ipad);
     }
 
-    w0[0] = rakp_bufs[salt_pos].salt_buf[esalt_off +  0];
-    w0[1] = rakp_bufs[salt_pos].salt_buf[esalt_off +  1];
-    w0[2] = rakp_bufs[salt_pos].salt_buf[esalt_off +  2];
-    w0[3] = rakp_bufs[salt_pos].salt_buf[esalt_off +  3];
-    w1[0] = rakp_bufs[salt_pos].salt_buf[esalt_off +  4];
-    w1[1] = rakp_bufs[salt_pos].salt_buf[esalt_off +  5];
-    w1[2] = rakp_bufs[salt_pos].salt_buf[esalt_off +  6];
-    w1[3] = rakp_bufs[salt_pos].salt_buf[esalt_off +  7];
-    w2[0] = rakp_bufs[salt_pos].salt_buf[esalt_off +  8];
-    w2[1] = rakp_bufs[salt_pos].salt_buf[esalt_off +  9];
-    w2[2] = rakp_bufs[salt_pos].salt_buf[esalt_off + 10];
-    w2[3] = rakp_bufs[salt_pos].salt_buf[esalt_off + 11];
-    w3[0] = rakp_bufs[salt_pos].salt_buf[esalt_off + 12];
-    w3[1] = rakp_bufs[salt_pos].salt_buf[esalt_off + 13];
+    w0[0] = rakp_bufs[digests_offset].salt_buf[esalt_off +  0];
+    w0[1] = rakp_bufs[digests_offset].salt_buf[esalt_off +  1];
+    w0[2] = rakp_bufs[digests_offset].salt_buf[esalt_off +  2];
+    w0[3] = rakp_bufs[digests_offset].salt_buf[esalt_off +  3];
+    w1[0] = rakp_bufs[digests_offset].salt_buf[esalt_off +  4];
+    w1[1] = rakp_bufs[digests_offset].salt_buf[esalt_off +  5];
+    w1[2] = rakp_bufs[digests_offset].salt_buf[esalt_off +  6];
+    w1[3] = rakp_bufs[digests_offset].salt_buf[esalt_off +  7];
+    w2[0] = rakp_bufs[digests_offset].salt_buf[esalt_off +  8];
+    w2[1] = rakp_bufs[digests_offset].salt_buf[esalt_off +  9];
+    w2[2] = rakp_bufs[digests_offset].salt_buf[esalt_off + 10];
+    w2[3] = rakp_bufs[digests_offset].salt_buf[esalt_off + 11];
+    w3[0] = rakp_bufs[digests_offset].salt_buf[esalt_off + 12];
+    w3[1] = rakp_bufs[digests_offset].salt_buf[esalt_off + 13];
     w3[2] = 0;
     w3[3] = (64 + esalt_size) * 8;
 

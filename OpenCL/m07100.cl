@@ -3,8 +3,6 @@
  * License.....: MIT
  */
 
-#define _PBKDF2_SHA512_
-
 #define NEW_SIMD_CODE
 
 #include "inc_vendor.cl"
@@ -17,7 +15,7 @@
 #define COMPARE_S "inc_comp_single.cl"
 #define COMPARE_M "inc_comp_multi.cl"
 
-__constant u64 k_sha512[80] =
+__constant u64a k_sha512[80] =
 {
   SHA512C00, SHA512C01, SHA512C02, SHA512C03,
   SHA512C04, SHA512C05, SHA512C06, SHA512C07,
@@ -41,7 +39,7 @@ __constant u64 k_sha512[80] =
   SHA512C4c, SHA512C4d, SHA512C4e, SHA512C4f,
 };
 
-static void sha512_transform_S (const u64 w[16], u64 dgst[8])
+void sha512_transform_S (const u64 w[16], u64 dgst[8])
 {
   u64 a = dgst[0];
   u64 b = dgst[1];
@@ -129,7 +127,7 @@ static void sha512_transform_S (const u64 w[16], u64 dgst[8])
   dgst[7] += h;
 }
 
-static void hmac_sha512_run_S (const u64 w1[16], const u64 ipad[8], const u64 opad[8], u64 dgst[8])
+void hmac_sha512_run_S (const u64 w1[16], const u64 ipad[8], const u64 opad[8], u64 dgst[8])
 {
   dgst[0] = ipad[0];
   dgst[1] = ipad[1];
@@ -173,7 +171,7 @@ static void hmac_sha512_run_S (const u64 w1[16], const u64 ipad[8], const u64 op
   sha512_transform_S (w, dgst);
 }
 
-static void hmac_sha512_init_S (u64 w[16], u64 ipad[8], u64 opad[8])
+void hmac_sha512_init_S (u64 w[16], u64 ipad[8], u64 opad[8])
 {
   w[ 0] ^= 0x3636363636363636;
   w[ 1] ^= 0x3636363636363636;
@@ -232,7 +230,7 @@ static void hmac_sha512_init_S (u64 w[16], u64 ipad[8], u64 opad[8])
   sha512_transform_S (w, opad);
 }
 
-static void sha512_transform_V (const u64x w[16], u64x dgst[8])
+void sha512_transform_V (const u64x w[16], u64x dgst[8])
 {
   u64x a = dgst[0];
   u64x b = dgst[1];
@@ -320,7 +318,7 @@ static void sha512_transform_V (const u64x w[16], u64x dgst[8])
   dgst[7] += h;
 }
 
-static void hmac_sha512_run_V (const u64x w1[16], const u64x ipad[8], const u64x opad[8], u64x dgst[8])
+void hmac_sha512_run_V (const u64x w1[16], const u64x ipad[8], const u64x opad[8], u64x dgst[8])
 {
   dgst[0] = ipad[0];
   dgst[1] = ipad[1];
@@ -364,7 +362,7 @@ static void hmac_sha512_run_V (const u64x w1[16], const u64x ipad[8], const u64x
   sha512_transform_V (w, dgst);
 }
 
-static void hmac_sha512_run_V_x (const u64x ipad[8], const u64x opad[8], u64x dgst[8])
+void hmac_sha512_run_V_x (const u64x ipad[8], const u64x opad[8], u64x dgst[8])
 {
   u64x w[16];
 
@@ -417,7 +415,7 @@ static void hmac_sha512_run_V_x (const u64x ipad[8], const u64x opad[8], u64x dg
   sha512_transform_V (w, dgst);
 }
 
-static void hmac_sha512_init_V (u64x w[16], u64x ipad[8], u64x opad[8])
+void hmac_sha512_init_V (u64x w[16], u64x ipad[8], u64x opad[8])
 {
   w[ 0] ^= 0x3636363636363636;
   w[ 1] ^= 0x3636363636363636;
@@ -522,20 +520,20 @@ __kernel void m07100_init (__global pw_t *pws, __global const kernel_rule_t *rul
 
   u32 salt_len  = salt_bufs[salt_pos].salt_len;
 
-  esalt_buf[ 0] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[ 0]), swap32_S (esalt_bufs[salt_pos].salt_buf[ 1]));
-  esalt_buf[ 1] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[ 2]), swap32_S (esalt_bufs[salt_pos].salt_buf[ 3]));
-  esalt_buf[ 2] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[ 4]), swap32_S (esalt_bufs[salt_pos].salt_buf[ 5]));
-  esalt_buf[ 3] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[ 6]), swap32_S (esalt_bufs[salt_pos].salt_buf[ 7]));
-  esalt_buf[ 4] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[ 8]), swap32_S (esalt_bufs[salt_pos].salt_buf[ 9]));
-  esalt_buf[ 5] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[10]), swap32_S (esalt_bufs[salt_pos].salt_buf[11]));
-  esalt_buf[ 6] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[12]), swap32_S (esalt_bufs[salt_pos].salt_buf[13]));
-  esalt_buf[ 7] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[14]), swap32_S (esalt_bufs[salt_pos].salt_buf[15]));
-  esalt_buf[ 8] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[16]), swap32_S (esalt_bufs[salt_pos].salt_buf[17]));
-  esalt_buf[ 9] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[18]), swap32_S (esalt_bufs[salt_pos].salt_buf[19]));
-  esalt_buf[10] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[20]), swap32_S (esalt_bufs[salt_pos].salt_buf[21]));
-  esalt_buf[11] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[22]), swap32_S (esalt_bufs[salt_pos].salt_buf[23]));
-  esalt_buf[12] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[24]), swap32_S (esalt_bufs[salt_pos].salt_buf[25]));
-  esalt_buf[13] = hl32_to_64_S (swap32_S (esalt_bufs[salt_pos].salt_buf[26]), swap32_S (esalt_bufs[salt_pos].salt_buf[27]));
+  esalt_buf[ 0] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[ 0]), swap32_S (esalt_bufs[digests_offset].salt_buf[ 1]));
+  esalt_buf[ 1] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[ 2]), swap32_S (esalt_bufs[digests_offset].salt_buf[ 3]));
+  esalt_buf[ 2] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[ 4]), swap32_S (esalt_bufs[digests_offset].salt_buf[ 5]));
+  esalt_buf[ 3] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[ 6]), swap32_S (esalt_bufs[digests_offset].salt_buf[ 7]));
+  esalt_buf[ 4] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[ 8]), swap32_S (esalt_bufs[digests_offset].salt_buf[ 9]));
+  esalt_buf[ 5] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[10]), swap32_S (esalt_bufs[digests_offset].salt_buf[11]));
+  esalt_buf[ 6] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[12]), swap32_S (esalt_bufs[digests_offset].salt_buf[13]));
+  esalt_buf[ 7] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[14]), swap32_S (esalt_bufs[digests_offset].salt_buf[15]));
+  esalt_buf[ 8] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[16]), swap32_S (esalt_bufs[digests_offset].salt_buf[17]));
+  esalt_buf[ 9] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[18]), swap32_S (esalt_bufs[digests_offset].salt_buf[19]));
+  esalt_buf[10] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[20]), swap32_S (esalt_bufs[digests_offset].salt_buf[21]));
+  esalt_buf[11] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[22]), swap32_S (esalt_bufs[digests_offset].salt_buf[23]));
+  esalt_buf[12] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[24]), swap32_S (esalt_bufs[digests_offset].salt_buf[25]));
+  esalt_buf[13] = hl32_to_64_S (swap32_S (esalt_bufs[digests_offset].salt_buf[26]), swap32_S (esalt_bufs[digests_offset].salt_buf[27]));
   esalt_buf[14] = 0;
   esalt_buf[15] = (128 + salt_len + 4) * 8;
 

@@ -35,7 +35,7 @@ static int init_restore (hashcat_ctx_t *hashcat_ctx)
 
   if (getcwd (rd->cwd, 255) == NULL)
   {
-    event_log_error (hashcat_ctx, "getcwd(): %m");
+    event_log_error (hashcat_ctx, "getcwd(): %s", strerror (errno));
 
     return -1;
   }
@@ -55,7 +55,7 @@ static int read_restore (hashcat_ctx_t *hashcat_ctx)
 
   if (fp == NULL)
   {
-    event_log_error (hashcat_ctx, "Restore file '%s': %m", eff_restore_file);
+    event_log_error (hashcat_ctx, "Restore file '%s': %s", eff_restore_file, strerror (errno));
 
     return -1;
   }
@@ -65,6 +65,26 @@ static int read_restore (hashcat_ctx_t *hashcat_ctx)
   if (fread (rd, sizeof (restore_data_t), 1, fp) != 1)
   {
     event_log_error (hashcat_ctx, "Can't read %s", eff_restore_file);
+
+    fclose (fp);
+
+    return -1;
+  }
+
+  // we only use these 2 checks to avoid "tainted string" warnings
+
+  if (rd->argc < 1)
+  {
+    event_log_error (hashcat_ctx, "Unusual low number of arguments (argc) within the restore file %s", eff_restore_file);
+
+    fclose (fp);
+
+    return -1;
+  }
+
+  if (rd->argc > 250) // some upper bound check is always good (with some dirs/dicts it could be a large string)
+  {
+    event_log_error (hashcat_ctx, "Unusual high number of arguments (argc) within the restore file %s", eff_restore_file);
 
     fclose (fp);
 
@@ -97,15 +117,31 @@ static int read_restore (hashcat_ctx_t *hashcat_ctx)
 
   fclose (fp);
 
+  if (hc_path_exist (rd->cwd) == false)
+  {
+    event_log_error (hashcat_ctx, "%s: %s", rd->cwd, strerror (errno));
+
+    return -1;
+  }
+
+  if (hc_path_is_directory (rd->cwd) == false)
+  {
+    event_log_error (hashcat_ctx, "%s: %s", rd->cwd, strerror (errno));
+
+    return -1;
+  }
+
   event_log_warning (hashcat_ctx, "Changing current working directory to '%s'", rd->cwd);
-  event_log_warning (hashcat_ctx, "");
+  event_log_warning (hashcat_ctx, NULL);
 
   if (chdir (rd->cwd))
   {
     event_log_error (hashcat_ctx, "The directory '%s' does not exist. It is needed to restore (--restore) the session.", rd->cwd);
-    event_log_error (hashcat_ctx, "You could either create this directory or update the .restore file using e.g. the analyze_hc_restore.pl tool:");
-    event_log_error (hashcat_ctx, "https://github.com/philsmd/analyze_hc_restore");
-    event_log_error (hashcat_ctx, "The directory must contain all files and folders mentioned within the command line.");
+
+    event_log_warning (hashcat_ctx, "You could either create this directory or update the .restore file using e.g. the analyze_hc_restore.pl tool:");
+    event_log_warning (hashcat_ctx, "https://github.com/philsmd/analyze_hc_restore");
+    event_log_warning (hashcat_ctx, "The directory must contain all files and folders mentioned within the command line.");
+    event_log_warning (hashcat_ctx, NULL);
 
     return -1;
   }
@@ -134,14 +170,14 @@ static int write_restore (hashcat_ctx_t *hashcat_ctx)
 
   if (fp == NULL)
   {
-    event_log_error (hashcat_ctx, "%s: %m", new_restore_file);
+    event_log_error (hashcat_ctx, "%s: %s", new_restore_file, strerror (errno));
 
     return -1;
   }
 
   if (setvbuf (fp, NULL, _IONBF, 0))
   {
-    event_log_error (hashcat_ctx, "setvbuf file '%s': %m", new_restore_file);
+    event_log_error (hashcat_ctx, "setvbuf file '%s': %s", new_restore_file, strerror (errno));
 
     fclose (fp);
 
@@ -187,13 +223,13 @@ int cycle_restore (hashcat_ctx_t *hashcat_ctx)
   {
     if (unlink (eff_restore_file) == -1)
     {
-      event_log_warning (hashcat_ctx, "Unlink file '%s': %m", eff_restore_file);
+      event_log_warning (hashcat_ctx, "Unlink file '%s': %s", eff_restore_file, strerror (errno));
     }
   }
 
   if (rename (new_restore_file, eff_restore_file) == -1)
   {
-    event_log_warning (hashcat_ctx, "Rename file '%s' to '%s': %m", new_restore_file, eff_restore_file);
+    event_log_warning (hashcat_ctx, "Rename file '%s' to '%s': %s", new_restore_file, eff_restore_file, strerror (errno));
   }
 
   return 0;
